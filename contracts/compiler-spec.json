@@ -1,0 +1,29 @@
+{
+  "language": "compact",
+  "version": "0.23",
+  "contractName": "VeilLend",
+  "target": "midnight-preprod",
+  "circuits": [
+    "initialize_lending_pool",
+    "deposit_liquidity",
+    "withdraw_liquidity",
+    "request_tier_loan",
+    "repay_loan",
+    "disclose_solvency_audit"
+  ],
+  "ledgerFields": [
+    "pool_admin_pk",
+    "authorized_issuer_pk",
+    "total_liquidity",
+    "total_borrowed",
+    "total_repaid",
+    "total_reserve_interest",
+    "loan_count",
+    "repaid_loan_count",
+    "active_borrowers_count",
+    "is_paused",
+    "tier1_max_limit",
+    "tier2_max_limit",
+    "tier3_max_limit"
+  ]
+}
