@@ -63,6 +63,7 @@ export const App: React.FC = () => {
         repaidLoansCount: 7,
         debtToIncomeRatioPct: 15,
         subjectIdentityHash: '0x77281938210482910385918392019482',
+        attestationSalt: '0x11223344556677889900aabbccddeeff',
         issuedTimestamp: Date.now()
       }
     );

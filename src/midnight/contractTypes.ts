@@ -1,9 +1,9 @@
-// VeilLend Contract Types & Midnight Interfaces
+﻿// VeilLend Contract Types & Midnight Interfaces
 
 export enum CreditTier {
-  TIER_1_PRIME = 1,     // Prime: >=$100k, Score >=750, Repaid >=5 -> 0% Collateral, 3.8% APR, Max 50,000 tDUST
-  TIER_2_STANDARD = 2,  // Standard: >=$60k, Score >=680, Repaid >=2 -> 25% Collateral, 6.5% APR, Max 25,000 tDUST
-  TIER_3_ENTRY = 3      // Entry: >=$30k, Score >=600, Repaid >=0 -> 60% Collateral, 10.2% APR, Max 10,000 tDUST
+  TIER_1_PRIME = 1,     // Prime: >=$100k, Score >=750, Repaid >=5, DTI <=20% -> 0% Collateral, 3.8% APR, Max 50,000 tDUST
+  TIER_2_STANDARD = 2,  // Standard: >=$60k, Score >=680, Repaid >=2, DTI <=35% -> 25% Collateral, 6.5% APR, Max 25,000 tDUST
+  TIER_3_ENTRY = 3      // Entry: >=$30k, Score >=600, Repaid >=0, DTI <=50% -> 60% Collateral, 10.2% APR, Max 10,000 tDUST
 }
 
 export interface TierConfig {
@@ -68,6 +68,7 @@ export interface FinancialAttributes {
   repaidLoansCount: number;
   debtToIncomeRatioPct: number;
   subjectIdentityHash: string; // Anonymous hash of borrower identity
+  attestationSalt: string;     // Cryptographic blinding salt
   issuedTimestamp: number;
 }
 
@@ -110,6 +111,10 @@ export interface PublicLedgerState {
   tier1MaxLimit: number;
   tier2MaxLimit: number;
   tier3MaxLimit: number;
+  nullifierRegistry: Record<string, boolean>;
+  activeLoans: Record<string, number>;
+  activeLoanTier: Record<string, number>;
+  lpBalances: Record<string, number>;
 }
 
 export interface ZkProofResult {
@@ -119,8 +124,10 @@ export interface ZkProofResult {
   publicInputs: {
     tier: CreditTier;
     requestedAmount: number;
+    collateralDeposited: number;
     authorizedIssuer: string;
     thresholdSatisfied: boolean;
+    inCircuitVerified: boolean;
   };
   proofGenerationTimeMs: number;
   status: 'proven' | 'verified' | 'failed';

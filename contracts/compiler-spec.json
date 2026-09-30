@@ -1,4 +1,4 @@
-{
+﻿{
   "language": "compact",
   "version": "0.23",
   "contractName": "VeilLend",
@@ -24,6 +24,10 @@
     "is_paused",
     "tier1_max_limit",
     "tier2_max_limit",
-    "tier3_max_limit"
+    "tier3_max_limit",
+    "nullifier_registry",
+    "active_loans",
+    "active_loan_tier",
+    "lp_balances"
   ]
 }

@@ -16,7 +16,7 @@ export const LiquidityPool: React.FC<LiquidityPoolProps> = ({ ledger, onLedgerUp
   const handleDeposit = async () => {
     setIsProcessing(true);
     try {
-      await protocol.depositLiquidity(depositAmount);
+      await protocol.depositLiquidity(protocol.DEFAULT_LP_ID, depositAmount);
       onLedgerUpdate(protocol.getLedgerState());
     } finally {
       setIsProcessing(false);

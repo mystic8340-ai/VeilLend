@@ -42,7 +42,8 @@ export const LendingMarket: React.FC<LendingMarketProps> = ({
         activeProof,
         borrowerAddress,
         selectedTier,
-        requestedAmount
+        requestedAmount,
+        requiredCollateral
       );
 
       setSuccessLoan(newLoan);

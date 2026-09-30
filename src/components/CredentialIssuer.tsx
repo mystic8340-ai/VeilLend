@@ -51,6 +51,7 @@ export const CredentialIssuer: React.FC<CredentialIssuerProps> = ({
       repaidLoansCount: Number(repaidLoans),
       debtToIncomeRatioPct: Number(dti),
       subjectIdentityHash: '0x' + Math.random().toString(16).slice(2, 10).repeat(4),
+      attestationSalt: '0x' + Math.random().toString(16).slice(2, 10).repeat(4),
       issuedTimestamp: Date.now()
     };
 

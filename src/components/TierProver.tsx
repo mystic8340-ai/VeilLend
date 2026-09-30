@@ -42,6 +42,7 @@ export const TierProver: React.FC<TierProverProps> = ({
         credential,
         selectedTier,
         requestedAmount,
+        Math.round((requestedAmount * config.collateralRatioPct) / 100),
         borrowerSecret,
         loanSalt,
         authorizedIssuerPk

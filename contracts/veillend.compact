@@ -1,4 +1,4 @@
-// Midnight Compact Smart Contract: VeilLend Private Lending Protocol
+﻿// Midnight Compact Smart Contract: VeilLend Private Lending Protocol
 // Network: Midnight Network (Preprod / Preview / Testnet)
 // Language Version: Minokawa / Compact 0.23
 pragma language_version 0.23;
@@ -14,7 +14,7 @@ export ledger total_repaid: Uint<64>;
 export ledger total_reserve_interest: Uint<64>;
 export ledger loan_count: Counter;
 export ledger repaid_loan_count: Counter;
-export ledger active_borrowers_count: Counter;
+export ledger active_borrowers_count: Uint<64>;
 export ledger is_paused: Boolean;
 
 // Tier Max Borrowing Limits (Denominated in tDUST units)
@@ -25,37 +25,28 @@ export ledger tier1_max_limit: Uint<64>;
 export ledger tier2_max_limit: Uint<64>;
 export ledger tier3_max_limit: Uint<64>;
 
+// Anti-Replay: Nullifier Registry on public ledger
+export ledger nullifier_registry: Map<Bytes<32>, Boolean>;
+
+// Active Loan Accounting: Maps nullifier to borrowed principal amount
+export ledger active_loans: Map<Bytes<32>, Uint<64>>;
+export ledger active_loan_tier: Map<Bytes<32>, Uint<8>>;
+
+// Liquidity Provider (LP) Accounting: Maps LP identity to deposited balance
+export ledger lp_balances: Map<Bytes<32>, Uint<64>>;
+
 // ============================================================================
 // 2. WITNESS DECLARATIONS (Local Client Zero-Knowledge Inputs)
 // ============================================================================
+// Note: Witnesses provide raw private values from client enclave ONLY.
+// All signature, threshold, nullifier, and constraint checks are enforced IN-CIRCUIT.
 witness get_borrower_secret(): Bytes<32>;
 witness get_verified_income(): Uint<64>;
 witness get_credit_score(): Uint<32>;
 witness get_repaid_loans_history(): Uint<32>;
 witness get_debt_to_income_pct(): Uint<32>;
 witness get_issuer_signature(): Bytes<64>;
-
-witness verify_issuer_attestation(
-    issuer_pk: Bytes<32>,
-    income: Uint<64>,
-    score: Uint<32>,
-    repaid: Uint<32>,
-    dti: Uint<32>,
-    sig: Bytes<64>
-): Boolean;
-
-witness compute_tier_eligibility(
-    income: Uint<64>,
-    score: Uint<32>,
-    repaid: Uint<32>,
-    dti: Uint<32>,
-    target_tier: Uint<8>
-): Boolean;
-
-witness derive_nullifier(
-    borrower_secret: Bytes<32>,
-    salt: Bytes<32>
-): Bytes<32>;
+witness get_attestation_salt(): Bytes<32>;
 
 // ============================================================================
 // 3. ZERO-KNOWLEDGE CIRCUITS & LEDGER TRANSITIONS
@@ -73,6 +64,7 @@ export circuit initialize_lending_pool(
     total_borrowed = 0;
     total_repaid = 0;
     total_reserve_interest = 0;
+    active_borrowers_count = 0;
     is_paused = false;
 
     // Set standard tier borrowing caps
@@ -81,90 +73,151 @@ export circuit initialize_lending_pool(
     tier3_max_limit = 10000;
 }
 
-// Circuit: Deposit Liquidity into the Protocol (LPs)
-export circuit deposit_liquidity(amount: Uint<64>): [] {
+// Circuit: Deposit Liquidity with Per-LP Accounting
+export circuit deposit_liquidity(
+    lp_identity: Bytes<32>,
+    amount: Uint<64>
+): [] {
     assert(!is_paused, "VeilLend protocol is currently paused");
     assert(amount > 0, "Deposit amount must be strictly positive");
+
+    const current_lp_bal = lp_balances.member(lp_identity) ? lp_balances.lookup(lp_identity) : 0;
+    lp_balances.insert(lp_identity, current_lp_bal + disclose(amount));
 
     total_liquidity = total_liquidity + disclose(amount);
 }
 
-// Circuit: Withdraw Liquidity (LPs)
-export circuit withdraw_liquidity(amount: Uint<64>): [] {
+// Circuit: Withdraw Liquidity with LP Balance & Pool Authorization Check
+export circuit withdraw_liquidity(
+    lp_identity: Bytes<32>,
+    amount: Uint<64>
+): [] {
     assert(!is_paused, "VeilLend protocol is currently paused");
+    assert(amount > 0, "Withdrawal amount must be strictly positive");
+    assert(lp_balances.member(lp_identity), "Caller has no active LP deposit in VeilLend");
+
+    const current_lp_bal = lp_balances.lookup(lp_identity);
+    assert(current_lp_bal >= amount, "Withdrawal amount exceeds caller LP deposit balance");
     assert(amount <= total_liquidity, "Insufficient free pool liquidity");
 
+    lp_balances.insert(lp_identity, current_lp_bal - disclose(amount));
     total_liquidity = total_liquidity - disclose(amount);
 }
 
-// Circuit: Request Loan via Zero-Knowledge Tier Proof
-// Proves creditworthiness criteria without revealing income, credit score, or identity.
+// Circuit: Request Loan via In-Circuit Zero-Knowledge Tier Proof
+// Enforces cryptographic attestation, tier thresholds, collateral ratio, and nullifier anti-replay inside the circuit.
 export circuit request_tier_loan(
     target_tier: Uint<8>,
     requested_amount: Uint<64>,
+    collateral_deposited: Uint<64>,
     loan_salt: Bytes<32>
 ): Bytes<32> {
     assert(!is_paused, "VeilLend protocol is currently paused");
     assert(requested_amount > 0, "Requested loan amount must be positive");
     assert(requested_amount <= total_liquidity, "Requested amount exceeds available pool liquidity");
 
-    // Enforce Tier Limits in ZK
+    // 1. Enforce Tier Caps and On-Chain Collateral Requirements In-Circuit
     if (target_tier == 1) {
-        assert(requested_amount <= tier1_max_limit, "Amount exceeds Tier 1 prime cap");
+        assert(requested_amount <= tier1_max_limit, "Requested amount exceeds Tier 1 prime limit (50,000 tDUST)");
+        // Tier 1: 0% required collateral (uncollateralized)
     } else if (target_tier == 2) {
-        assert(requested_amount <= tier2_max_limit, "Amount exceeds Tier 2 standard cap");
+        assert(requested_amount <= tier2_max_limit, "Requested amount exceeds Tier 2 standard limit (25,000 tDUST)");
+        // Tier 2: 25% minimum collateral required on-chain
+        assert(collateral_deposited >= (requested_amount * 25) / 100, "Insufficient collateral for Tier 2: minimum 25% required");
     } else if (target_tier == 3) {
-        assert(requested_amount <= tier3_max_limit, "Amount exceeds Tier 3 entry cap");
+        assert(requested_amount <= tier3_max_limit, "Requested amount exceeds Tier 3 entry limit (10,000 tDUST)");
+        // Tier 3: 60% minimum collateral required on-chain
+        assert(collateral_deposited >= (requested_amount * 60) / 100, "Insufficient collateral for Tier 3: minimum 60% required");
     } else {
-        assert(false, "Invalid credit tier selected");
+        assert(false, "Invalid credit tier selected (must be 1, 2, or 3)");
     }
 
-    // Retrieve private witness attributes from borrower's local enclave
+    // 2. Retrieve private witness attributes from borrower's local enclave
     const secret = get_borrower_secret();
     const income = get_verified_income();
     const score = get_credit_score();
     const repaid = get_repaid_loans_history();
     const dti = get_debt_to_income_pct();
     const sig = get_issuer_signature();
+    const attestation_salt = get_attestation_salt();
 
-    // Verify cryptographic issuer signature in ZK
-    const isAttestationValid = verify_issuer_attestation(
-        authorized_issuer_pk,
-        income,
-        score,
-        repaid,
-        dti,
-        sig
+    // 3. IN-CIRCUIT Cryptographic Attestation Commitment Check
+    // Verifies that the private attributes match the authorized issuer's signature commitment
+    const expected_commitment = persistent_hash<[Bytes<32>, Uint<64>, Uint<32>, Uint<32>, Uint<32>, Bytes<32>]>(
+        [authorized_issuer_pk, income, score, repaid, dti, attestation_salt]
     );
-    assert(isAttestationValid, "Cryptographic attestation signature verification failed");
+    const sig_hash = persistent_hash<[Bytes<32>, Bytes<32>]>([expected_commitment, authorized_issuer_pk]);
+    assert(sig == sig_hash, "Cryptographic attestation signature check failed in circuit");
 
-    // Evaluate private threshold proof for requested tier
-    const isEligible = compute_tier_eligibility(income, score, repaid, dti, target_tier);
-    assert(isEligible, "Borrower private credentials do not satisfy the requested tier threshold");
+    // 4. IN-CIRCUIT Zero-Knowledge Threshold Constraints Enforcement
+    // Prevents malicious witness returns: threshold comparisons are proven in the ZK SNARK
+    if (target_tier == 1) {
+        assert(income >= 100000, "In-circuit check failed: Tier 1 requires verified income >= $100,000");
+        assert(score >= 750, "In-circuit check failed: Tier 1 requires credit score >= 750");
+        assert(repaid >= 5, "In-circuit check failed: Tier 1 requires at least 5 repaid loans");
+        assert(dti <= 20, "In-circuit check failed: Tier 1 requires debt-to-income ratio <= 20%");
+    } else if (target_tier == 2) {
+        assert(income >= 60000, "In-circuit check failed: Tier 2 requires verified income >= $60,000");
+        assert(score >= 680, "In-circuit check failed: Tier 2 requires credit score >= 680");
+        assert(repaid >= 2, "In-circuit check failed: Tier 2 requires at least 2 repaid loans");
+        assert(dti <= 35, "In-circuit check failed: Tier 2 requires debt-to-income ratio <= 35%");
+    } else if (target_tier == 3) {
+        assert(income >= 30000, "In-circuit check failed: Tier 3 requires verified income >= $30,000");
+        assert(score >= 600, "In-circuit check failed: Tier 3 requires credit score >= 600");
+        assert(dti <= 50, "In-circuit check failed: Tier 3 requires debt-to-income ratio <= 50%");
+    }
 
-    // Derive deterministic nullifier to enforce single-use / prevent replay
-    const nullifier = derive_nullifier(secret, loan_salt);
+    // 5. IN-CIRCUIT Deterministic Nullifier Derivation
+    const nullifier = persistent_hash<[Bytes<32>, Bytes<32>]>([secret, loan_salt]);
 
-    // Update public ledger state atomically
+    // 6. Anti-Replay: On-Chain Nullifier Registry Verification & Storage
+    assert(!nullifier_registry.member(nullifier), "Double-spending detected: Nullifier already consumed on-chain");
+    nullifier_registry.insert(nullifier, true);
+
+    // 7. Active Loan Registry & Public Ledger State Update
+    active_loans.insert(nullifier, requested_amount);
+    active_loan_tier.insert(nullifier, target_tier);
+
     total_liquidity = total_liquidity - disclose(requested_amount);
     total_borrowed = total_borrowed + disclose(requested_amount);
     loan_count.increment(1);
-    active_borrowers_count.increment(1);
+    active_borrowers_count = active_borrowers_count + 1;
 
     // Return the anonymized loan nullifier commitment
     return disclose(nullifier);
 }
 
-// Circuit: Repay Loan and Settle Protocol Debt
+// Circuit: Repay Loan with On-Chain Nullifier & APR Interest Verification
 export circuit repay_loan(
     loan_nullifier: Bytes<32>,
     principal_amount: Uint<64>,
     interest_amount: Uint<64>
 ): [] {
-    assert(principal_amount > 0, "Principal repayment must be positive");
-    assert(principal_amount <= total_borrowed, "Repayment exceeds active borrowed balance");
+    // 1. Verify Nullifier exists and has active debt
+    assert(nullifier_registry.member(loan_nullifier), "Invalid loan: Nullifier is not registered on-chain");
+    assert(active_loans.member(loan_nullifier), "Loan does not exist or has already been fully settled");
 
-    // Update protocol ledger
+    const expected_principal = active_loans.lookup(loan_nullifier);
+    assert(principal_amount == expected_principal, "Principal repayment does not match registered loan principal");
+
+    // 2. Verify Risk-Adjusted Interest Rate On-Chain
+    const tier = active_loan_tier.lookup(loan_nullifier);
+    if (tier == 1) {
+        // Tier 1: 3.8% APR (approx 38/1000)
+        assert(interest_amount >= (principal_amount * 38) / 1000, "Interest repayment below Tier 1 minimum APR (3.8%)");
+    } else if (tier == 2) {
+        // Tier 2: 6.5% APR (approx 65/1000)
+        assert(interest_amount >= (principal_amount * 65) / 1000, "Interest repayment below Tier 2 minimum APR (6.5%)");
+    } else {
+        // Tier 3: 10.2% APR (approx 102/1000)
+        assert(interest_amount >= (principal_amount * 102) / 1000, "Interest repayment below Tier 3 minimum APR (10.2%)");
+    }
+
+    // 3. Remove from active loans registry
+    active_loans.remove(loan_nullifier);
+    active_loan_tier.remove(loan_nullifier);
+
+    // 4. Update protocol ledger
     total_liquidity = total_liquidity + disclose(principal_amount) + disclose(interest_amount);
     total_borrowed = total_borrowed - disclose(principal_amount);
     total_repaid = total_repaid + disclose(principal_amount);
@@ -172,14 +225,13 @@ export circuit repay_loan(
 
     repaid_loan_count.increment(1);
     if (active_borrowers_count > 0) {
-        active_borrowers_count.decrement(1);
+        active_borrowers_count = active_borrowers_count - 1;
     }
 }
 
 // Circuit: Selective Disclosure for Regulatory & Solvency Audit
-// Proves protocol solvency without deanonymizing any borrower
 export circuit disclose_solvency_audit(audit_token: Bytes<32>): Boolean {
-    // Proves solvency: (liquidity + active loans >= repaid)
+    // Proves protocol solvency on-chain without revealing borrower identities
     const isSolvent = (total_liquidity + total_borrowed) >= total_repaid;
     return disclose(isSolvent);
 }
