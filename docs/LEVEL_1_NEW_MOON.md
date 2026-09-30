@@ -1,4 +1,4 @@
-﻿# Level 1 — New Moon: VeilLend Architecture & Privacy Specification
+# Level 1 — New Moon: VeilLend Architecture & Privacy Specification
 
 ## 1. Problem Statement
 In traditional Decentralized Finance (DeFi) lending markets (e.g., Aave, Compound), protocols operate exclusively on either:
@@ -10,7 +10,13 @@ In traditional Decentralized Finance (DeFi) lending markets (e.g., Aave, Compoun
 
 No credit scores, tax returns, bank balances, or personal identity numbers are ever published on-chain. Only the mathematical proof of threshold satisfaction and single-use nullifiers touch the Midnight ledger.
 
-## 3. Midnight Privacy Model & Dual-State Design
+## 3. Official Hackathon Challenge Alignment: Credentials & Eligibility
+VeilLend directly fulfills the **"Credentials"** and **"Eligibility"** tracks from the official Rise In / Midnight challenge idea list:
+1. **Credentials**: Institutional issuers issue cryptographically signed credentials (`SignedCredential`) verifying financial attributes (income, credit score, defaults, DTI) with cryptographic signatures.
+2. **Eligibility**: Borrowers execute client-side zero-knowledge proofs demonstrating that their private attributes satisfy risk tier thresholds without disclosing values or wallet identity.
+3. **Allowlist / Protocol Gating**: The Compact smart contract validates proofs and nullifiers on-chain, granting borrowing eligibility exclusively to verified zero-knowledge credentials.
+
+## 4. Midnight Privacy Model & Dual-State Design
 Midnight’s unique dual-state architecture divides state into two realms:
 - **Public Ledger State (`veillend.compact`)**:
   - Global pool liquidity and reserves.

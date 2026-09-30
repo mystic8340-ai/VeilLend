@@ -1,9 +1,9 @@
-﻿import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { VeilLendProtocol } from '../src/midnight/veillendSimulator';
 import { ZkProofEngine } from '../src/midnight/zkProofEngine';
 import { CreditTier, FinancialAttributes } from '../src/midnight/contractTypes';
 
-describe('VeilLend Confidential Lending Market & On-Chain State Machine Suite', () => {
+describe('VeilLend Unit Tests: Confidential Lending State Machine & Double-Spending Prevention', () => {
   let protocol: VeilLendProtocol;
   let zkEngine: ZkProofEngine;
 

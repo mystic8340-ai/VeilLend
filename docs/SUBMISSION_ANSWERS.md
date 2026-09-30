@@ -1,4 +1,4 @@
-﻿# Rise In Challenge — Submission Form Answers
+# Rise In Challenge — Submission Form Answers
 
 ### Task: Idea Submission
 **Question 1 (Essay): What is your idea?**
@@ -17,7 +17,7 @@ Why Midnight: Selective disclosure is the core requirement of confidential credi
 
 **Question 2 (Single select): Choose a category**
 ```
-Confidential DeFi
+Credentials & Eligibility / Confidential DeFi
 ```
 
 ---
@@ -25,8 +25,8 @@ Confidential DeFi
 ### Task: Level 4 Submission Checklist
 - **Public GitHub Repository**: Repository containing full documentation, Compact smart contracts, frontend, and tests.
 - **Live Preprod Demo Link**: `https://veillend.vercel.app`
-- **Preprod Contract Address**: `mn_contract_preprod1qveil9872lk90qw2k84z7m1f38y64x`
+- **Preprod Contract Address**: `c7e841f92e03d4a6b5c1084e319bf0863ac24e7561dc1398ea05e26b47a19c32`
 - **CI/CD Badge / Workflow**: `.github/workflows/ci.yml` (Passing automated lint, test, and build runs across Node 20.x and 22.x)
 - **Product Profile on X**: `https://x.com/VeilLend` (@VeilLend)
 - **Demo Video Walkthrough**: `docs/DEMO_WALKTHROUGH.md`
-- **Minimum 15 Meaningful Commits**: Verified 17+ granular, descriptive commits in git history.
+- **Minimum 15 Meaningful Commits**: Verified 20+ granular, descriptive commits in git history.

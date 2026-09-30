@@ -1,4 +1,4 @@
-﻿# VeilLend — Zero-Knowledge Private Lending Protocol on Midnight
+# VeilLend — Zero-Knowledge Private Lending Protocol on Midnight
 
 [![CI/CD Pipeline](https://github.com/mystic8340-ai/VeilLend/actions/workflows/ci.yml/badge.svg)](https://github.com/mystic8340-ai/VeilLend/actions)
 [![Midnight Network](https://img.shields.io/badge/Midnight-Preprod_Live-6366F1?logo=cardano)](https://midnight.network)
@@ -11,7 +11,7 @@
 
 - 🌐 **Live Preprod Demo**: [https://veillend.vercel.app](https://veillend.vercel.app)
 - 🚀 **Browser Contract Deploy Route**: [https://veillend.vercel.app/deploy](https://veillend.vercel.app/deploy) (or local `http://localhost:3000/deploy`)
-- 📜 **Preprod Contract Address**: `mn_contract_preprod1qveil9872lk90qw2k84z7m1f38y64x`
+- 📜 **Preprod Contract Address**: `c7e841f92e03d4a6b5c1084e319bf0863ac24e7561dc1398ea05e26b47a19c32`
 - 🐦 **Product Profile on X**: [@VeilLend](https://x.com/VeilLend)
 - 📹 **Demo Walkthrough Video Script**: [docs/DEMO_WALKTHROUGH.md](docs/DEMO_WALKTHROUGH.md)
 
@@ -59,14 +59,26 @@ VeilLend uses Midnight's dual-state architecture (Public Ledger + Local Private 
 
 ---
 
+## 🏆 Hackathon Idea Track Alignment: Credentials & Eligibility
+VeilLend directly fulfills the **"Credentials"** and **"Eligibility"** categories from the official Rise In / Midnight challenge idea list:
+1. **Credentials**: Institutional issuers sign private user credentials (`SignedCredential`) verifying financial attributes (income, credit score, defaults, DTI) with cryptographic signatures.
+2. **Eligibility**: Borrowers execute client-side zero-knowledge proofs demonstrating that their private attributes satisfy risk tier thresholds without disclosing values or wallet identity.
+3. **Allowlist / Protocol Gating**: The Compact smart contract validates proofs and nullifiers on-chain, granting borrowing eligibility exclusively to verified zero-knowledge credentials.
+
+---
+
 ## Technical Stack
 - **Smart Contract Language**: Midnight Compact (Minokawa) v0.23 (`contracts/veillend.compact`)
 - **DApp Connector & Deployer**: 1AM Wallet Extension & `@midnight-ntwrk/dapp-connector-api` on Midnight Preprod
 - **Proving Provider**: 1AM Extension ProofStation (Zero local proof server required)
-- **ZK Circuit Engine**: Client-side witness proving and nullifier derivation (`src/midnight/zkProofEngine.ts`)
+- **ZK Circuit Engine**: In-circuit mathematical constraints, Pedersen commitments, and Poseidon nullifiers (`src/midnight/zkProofEngine.ts`)
 - **Frontend**: React 18, Vite, TypeScript, TailwindCSS, Lucide Icons
-- **Testing**: Vitest suite with 100% passing tests (`tests/`)
-- **CI/CD**: GitHub Actions workflows for continuous integration and preprod deployment
+- **Testing**: Vitest suite with **15 passing tests across 4 test suites** (`tests/`):
+  - `CompactContract.test.ts` (4 unit tests): Ledger state, LP accounting, withdrawals & solvency
+  - `ZkCreditProver.test.ts` (5 unit tests): In-circuit constraints, forged signatures & nullifiers
+  - `LendingPool.test.ts` (3 unit tests): Undercollateralized loans, double-spending prevention & repayment
+  - `MidnightDAppIntegration.test.ts` (3 integration tests): DApp connector authentication & contract AST specification
+- **CI/CD**: GitHub Actions workflows for continuous integration (`ci.yml`), Compact AST verification (`compact:verify`), and preprod release packaging (`deploy.yml`)
 
 ---
 
@@ -79,18 +91,23 @@ cd veillend
 npm install
 ```
 
-### 2. Run Tests
+### 2. Verify Compact Smart Contract
+```bash
+npm run compact:verify
+```
+
+### 3. Run Test Suite (15 Passing Tests)
 ```bash
 npm test
 ```
 
-### 3. Run Development Server
+### 4. Run Development Server
 ```bash
 npm run dev
 ```
 Open `http://localhost:3000` to interact with the VeilLend application, or `http://localhost:3000/deploy` for the browser extension contract deployment UI.
 
-### 4. Build for Production
+### 5. Build for Production
 ```bash
 npm run build
 ```

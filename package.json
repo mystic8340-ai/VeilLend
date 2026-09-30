@@ -10,7 +10,9 @@
     "lint": "tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "compact:verify": "node scripts/verify-compact.mjs",
+    "compact:compile": "compactc contracts/veillend.compact"
   },
   "dependencies": {
     "@midnight-ntwrk/dapp-connector-api": "^1.0.0",

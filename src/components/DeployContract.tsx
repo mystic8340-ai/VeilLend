@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Rocket, 
   Shield, 
@@ -39,9 +39,12 @@ export const DeployContract: React.FC<DeployContractProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    detect1AMWallet().then((w) => setWalletAvailable(w !== null));
-    // Auto-create initial session for seamless dev experience
-    create1AMConnectedSession(null).then((s) => setSession(s));
+    detect1AMWallet().then((w) => {
+      setWalletAvailable(w !== null);
+      if (!w) {
+        setSession(null);
+      }
+    });
   }, []);
 
   const handleConnectWallet = async () => {
@@ -49,9 +52,14 @@ export const DeployContract: React.FC<DeployContractProps> = ({
     setErrorMsg(null);
     try {
       const wallet = await detect1AMWallet();
+      if (!wallet) {
+        throw new Error("1AM / Lace extension not found. Please install the 1AM wallet extension to connect.");
+      }
       let api: any = null;
-      if (wallet && typeof wallet.connect === 'function') {
+      if (typeof wallet.connect === 'function') {
         api = await wallet.connect('preprod');
+      } else if (typeof wallet.enable === 'function') {
+        api = await wallet.enable();
       }
       const s = await create1AMConnectedSession(api);
       setSession(s);
@@ -63,7 +71,10 @@ export const DeployContract: React.FC<DeployContractProps> = ({
   };
 
   const handleDeploy = async () => {
-    if (!session) return;
+    if (!session || !session.api) {
+      setErrorMsg("Wallet not connected: Please connect your 1AM wallet extension before deploying.");
+      return;
+    }
     setIsDeploying(true);
     setErrorMsg(null);
     setDeployStep('Initializing deployment flow...');
@@ -76,7 +87,7 @@ export const DeployContract: React.FC<DeployContractProps> = ({
       setDeployResult(result);
       onContractDeployed(result.contractAddress);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Contract deployment failed');
+      setErrorMsg(err.message || 'Contract deployment failed: Wallet not connected or user rejected');
     } finally {
       setIsDeploying(false);
       setDeployStep('');
@@ -225,13 +236,30 @@ export const DeployContract: React.FC<DeployContractProps> = ({
           )}
 
           {!deployResult && !isDeploying && (
-            <button
-              onClick={handleDeploy}
-              className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-sm transition-all shadow-xl shadow-cyan-500/20 flex items-center justify-center space-x-2"
-            >
-              <Rocket className="w-5 h-5" />
-              <span>Deploy VeilLend Contract via 1AM Extension</span>
-            </button>
+            !session ? (
+              <div className="space-y-3">
+                <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>1AM Wallet Not Connected. Connect your 1AM browser extension on Midnight Preprod before deploying.</span>
+                </div>
+                <button
+                  onClick={handleConnectWallet}
+                  disabled={isConnecting}
+                  className="w-full py-4 px-6 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
+                >
+                  <Shield className="w-5 h-5" />
+                  <span>{isConnecting ? 'Connecting 1AM Wallet...' : 'Connect 1AM Wallet to Deploy'}</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleDeploy}
+                className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-sm transition-all shadow-xl shadow-cyan-500/20 flex items-center justify-center space-x-2"
+              >
+                <Rocket className="w-5 h-5" />
+                <span>Deploy VeilLend Contract via 1AM Extension</span>
+              </button>
+            )
           )}
 
           {/* Step 3: SUCCESS STATE - Shows Deployed Contract Address */}

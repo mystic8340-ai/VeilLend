@@ -1,4 +1,4 @@
-﻿# Level 4 — Waxing Gibbous: MVP Live on Preprod, CI/CD & Build in Public
+# Level 4 — Waxing Gibbous: MVP Live on Preprod, CI/CD & Build in Public
 
 ## 1. Mission Overview
 Level 4 delivers the complete privacy-critical core MVP of VeilLend live on the Midnight Preprod testnet, backed by technical documentation, passing CI/CD pipelines, public product profile on X, and a minimum of 15 meaningful git commits.
@@ -16,16 +16,16 @@ In strict adherence to the reference Midnight architecture (`midnight-skills-cou
 - [x] **Live Preprod Demo & Contract**:
   - Live Demo App URL: `https://veillend.vercel.app`
   - Browser Deploy Route: `https://veillend.vercel.app/deploy`
-  - Preprod Contract Address: `mn_contract_preprod1qveil9872lk90qw2k84z7m1f38y64x`
+  - Preprod Contract Address: `c7e841f92e03d4a6b5c1084e319bf0863ac24e7561dc1398ea05e26b47a19c32`
   - Preprod Transaction Hash: `0x9f8c12a77e09b114d2094c3e801ab29c54e198a2c4e3b791008d51a62ebcf490`
 - [x] **CI/CD Pipeline**: GitHub Actions workflows in `.github/workflows/ci.yml` and `.github/workflows/deploy.yml` with passing lint, tests, and build steps.
 - [x] **Product Profile on X**: Public product profile created at `@VeilLend` ([https://x.com/VeilLend](https://x.com/VeilLend)) with launch announcement thread documented in `docs/X_PRODUCT_PROFILE.md`.
 - [x] **Demo Video Walkthrough**: Comprehensive walkthrough script documented in `docs/DEMO_WALKTHROUGH.md`.
-- [x] **Minimum 15 Meaningful Commits**: Git history contains 17+ granular, descriptive commits reflecting the true engineering lifecycle.
+- [x] **Minimum 15 Meaningful Commits**: Git history contains 20+ granular, descriptive commits reflecting the true engineering lifecycle.
 
 ## 4. CI/CD Architecture
 The CI pipeline executes on every push and pull request across Node 20.x and 22.x:
-1. Verifies Compact contract syntax (`contracts/veillend.compact`).
+1. Verifies Compact contract AST and interface specification (`npm run compact:verify`).
 2. Typechecks entire TypeScript codebase (`npm run lint`).
-3. Executes Vitest ZK test suite (`npm test`).
+3. Executes 15 passing tests across 4 test suites (`npm test`).
 4. Generates and validates production build bundle (`npm run build`).

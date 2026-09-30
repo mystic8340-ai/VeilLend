@@ -1,7 +1,7 @@
-﻿import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { VeilLendProtocol } from '../src/midnight/veillendSimulator';
 
-describe('VeilLend Compact Smart Contract Suite', () => {
+describe('VeilLend Unit Tests: Compact Contract Behavior & Public Ledger State Model', () => {
   let protocol: VeilLendProtocol;
 
   beforeEach(() => {

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { DeployContract } from './components/DeployContract';
 import { CredentialIssuer } from './components/CredentialIssuer';
@@ -73,8 +73,12 @@ export const App: React.FC = () => {
   }, []);
 
   const handleConnectWallet = async () => {
-    const acc = await connector.connect();
-    setAccount(acc);
+    try {
+      const acc = await connector.connect();
+      setAccount(acc);
+    } catch (err: any) {
+      alert(err.message || "Midnight wallet extension not detected. Please install 1AM or Midnight Lace.");
+    }
   };
 
   const handleContractDeployed = (newAddress: string) => {

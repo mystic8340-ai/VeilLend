@@ -1,8 +1,8 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { ZkProofEngine } from '../src/midnight/zkProofEngine';
 import { CreditTier, FinancialAttributes } from '../src/midnight/contractTypes';
 
-describe('VeilLend In-Circuit Zero-Knowledge Credit Tier Prover Suite', () => {
+describe('VeilLend Unit Tests: Zero-Knowledge Credit Prover & Mathematical Constraint Model', () => {
   const engine = ZkProofEngine.getInstance();
   const issuerPk = '0x8f4c2e1b9a3d7e5f0c2b4a6d8e1f3a5b7c9e0d2f4a6b8c0e2d4f6a8b0c2e4f6';
 

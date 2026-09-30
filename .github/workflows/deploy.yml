@@ -1,4 +1,8 @@
-﻿name: Deploy Preprod Testnet DApp
+name: Build and Package Preprod DApp Release
+
+# Note: Smart contract deployment is performed directly in-browser via the 1AM wallet extension
+# on the dedicated /deploy route (zero funded server-side deployer keys needed).
+# This workflow verifies contract integrity, runs the test suite, and builds the distribution bundle.
 
 on:
   workflow_dispatch:
@@ -10,8 +14,8 @@ on:
       - 'public/**'
 
 jobs:
-  deploy:
-    name: Deploy to Live Preprod Preview
+  build-and-verify:
+    name: Build & Verify Preprod Release Bundle
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -26,16 +30,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Tests
+      - name: Verify Compact Contract AST & Specification
+        run: npm run compact:verify
+
+      - name: Run Test Suite
         run: npm test
 
       - name: Build App
         run: npm run build
 
-      - name: Verify Preprod Contract Integrity
+      - name: Verify Distribution Artifacts
         run: |
-          node -e "
-          const fs = require('fs');
-          const spec = JSON.parse(fs.readFileSync('contracts/compiler-spec.json', 'utf8'));
-          console.log('Deploying target:', spec.contractName, 'to', spec.target);
-          "
+          test -f dist/index.html
+          echo "Preprod release bundle built and validated successfully."

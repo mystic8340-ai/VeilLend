@@ -13,12 +13,8 @@ export class MidnightDAppConnector {
   private isConnecting: boolean = false;
 
   private constructor() {
-    // Default demo testnet account
-    this.connectedAccount = {
-      address: 'mn_addr_preprod1q9v8k74z8g2f6w30pxc5y7h0d1a4j8k3x2m9n1',
-      networkId: 'midnight-preprod',
-      balanceTdust: 245000
-    };
+    // Initial state: no wallet connected by default
+    this.connectedAccount = null;
   }
 
   public static getInstance(): MidnightDAppConnector {
@@ -30,32 +26,42 @@ export class MidnightDAppConnector {
 
   public async connect(): Promise<MidnightAccount> {
     this.isConnecting = true;
-    // Check if Midnight Lace browser extension window.midnight is present
+    // Check if Midnight Lace or 1AM browser extension is present
     if (typeof window !== 'undefined' && (window as any).midnight) {
-      try {
-        const wallet = await (window as any).midnight.mnLace.enable();
-        const address = await wallet.getAddress();
-        this.connectedAccount = {
-          address,
-          networkId: 'midnight-preprod',
-          balanceTdust: 350000
-        };
-        this.isConnecting = false;
-        return this.connectedAccount;
-      } catch (err) {
-        console.warn("Lace extension rejected or not initialized, using Preprod Testnet wallet session.");
+      const midnightObj = (window as any).midnight;
+      const walletObj = midnightObj['1am'] || midnightObj.mnLace;
+
+      if (walletObj) {
+        try {
+          const walletApi = typeof walletObj.enable === 'function' ? await walletObj.enable() : await walletObj.connect?.('preprod');
+          const address = typeof walletApi.getAddress === 'function'
+            ? await walletApi.getAddress()
+            : (await walletApi.getUnshieldedAddress?.()?.then((u: any) => u?.unshieldedAddress || u) || 'mn_addr_preprod1...');
+          
+          let balance = 0;
+          if (typeof walletApi.getBalance === 'function') {
+            balance = await walletApi.getBalance();
+          }
+
+          this.connectedAccount = {
+            address,
+            networkId: 'midnight-preprod',
+            balanceTdust: balance
+          };
+          this.isConnecting = false;
+          return this.connectedAccount;
+        } catch (err: any) {
+          this.isConnecting = false;
+          throw new Error(err?.message || "User rejected Midnight wallet connection.");
+        }
       }
     }
 
-    // Fallback simulated Preprod testnet account
-    await new Promise((r) => setTimeout(r, 250));
-    this.connectedAccount = {
-      address: 'mn_addr_preprod1q9v8k74z8g2f6w30pxc5y7h0d1a4j8k3x2m9n1',
-      networkId: 'midnight-preprod',
-      balanceTdust: 245000
-    };
     this.isConnecting = false;
-    return this.connectedAccount;
+    // Explicit requirement: Fail cleanly with 'Wallet not connected' error instead of silent fake fallback
+    throw new Error(
+      "Wallet not connected: Midnight 1AM or Lace extension not detected. Please install the 1AM or Midnight Lace browser extension."
+    );
   }
 
   public getAccount(): MidnightAccount | null {

@@ -1,4 +1,4 @@
-﻿name: VeilLend CI/CD Pipeline
+name: VeilLend CI/CD Pipeline
 
 on:
   push:
@@ -28,12 +28,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify Compact Smart Contract Syntax
-        run: |
-          test -f contracts/veillend.compact
-          grep -q "pragma language_version" contracts/veillend.compact
-          grep -q "request_tier_loan" contracts/veillend.compact
-          echo "Compact contract syntax validated."
+      - name: Verify Compact Contract AST & Interface Specification
+        run: npm run compact:verify
 
       - name: Run TypeScript Typecheck
         run: npm run lint
