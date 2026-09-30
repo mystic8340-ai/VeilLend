@@ -86,10 +86,10 @@ The observer **cannot see**:
 - **Proving Provider**: 1AM Extension ProofStation (Zero local proof server required)
 - **ZK Circuit Engine**: In-circuit mathematical constraints, Pedersen commitments, and Poseidon nullifiers (`src/midnight/zkProofEngine.ts`)
 - **Frontend**: React 18, Vite, TypeScript, TailwindCSS, Lucide Icons
-- **Testing**: Vitest suite with **21 passing tests across 5 test suites** (`tests/`)
+- **Testing**: Vitest suite with **24 passing tests across 6 test suites** (`tests/`)
 
 ## Prerequisites
-- **1AM Wallet Extension** installed in a Chromium-based browser (Chrome, Brave, Edge)
+- **1AM / Midnight Lace Wallet Extension** installed in a Chromium-based browser (Chrome, Brave, Edge)
 - **Node.js**: v20.x or v22.x LTS
 - **Git**: For version control and cloning
 - Testnet DUST (tDUST) on **Midnight Preprod** (available via 1AM faucet)
@@ -127,12 +127,13 @@ Execution results:
 ```text
  ✓ tests/CompactContract.test.ts (4 tests)
  ✓ tests/LendingPool.test.ts (3 tests)
+ ✓ tests/veillend.test.ts (3 tests)
  ✓ tests/ZkCreditProver.test.ts (5 tests)
  ✓ tests/VeilLendPrivacy.test.ts (5 tests)
  ✓ tests/MidnightDAppIntegration.test.ts (4 tests)
 
- Test Files  5 passed (5)
-      Tests  21 passed (21)
+ Test Files  6 passed (6)
+      Tests  24 passed (24)
 ```
 
 ## CI/CD
@@ -141,7 +142,7 @@ VeilLend implements an automated GitHub Actions CI/CD pipeline (`.github/workflo
 2. **Environment Setup**: Configures Node.js and installs locked dependencies.
 3. **Compact AST Verification**: Verifies Compact contract syntax, circuits, and public ledger exports against `compiler-spec.json`.
 4. **Static Typecheck**: Enforces strict TypeScript verification (`npm run lint`).
-5. **Automated Testing**: Runs all 21 Vitest tests covering circuit constraints, state transitions, privacy preservation, double-spending prevention, and 1AM transaction balancing.
+5. **Automated Testing**: Runs all 24 Vitest tests covering circuit constraints, state transitions, privacy preservation, double-spending prevention, and 1AM transaction balancing.
 6. **Production Compilation**: Executes `npm run build` validating all WASM modules, rollup chunks, and CSS assets.
 
 ## Usage Guide
@@ -149,6 +150,17 @@ See [docs/USAGE.md](docs/USAGE.md) for a comprehensive, non-technical walkthroug
 
 ## Product Proposal
 See [PROPOSAL.md](PROPOSAL.md) for the Level 3 / Level 4 product proposal specification.
+
+## Demo Video
+[PLACEHOLDER — I will add the link after recording]
+
+### Demo Video Checklist (Under 2 Minutes)
+1. **Wallet Connection**: Connect 1AM / Midnight Lace wallet and show the address appear on screen.
+2. **Deploy / Connect**: Display Midnight Preprod network indicator and active contract address.
+3. **ZK Proof Generation**: Show the loading state while the client evaluates zero-knowledge circuit constraints locally.
+4. **On-Chain Circuit Call**: Submit the loan request with proof, showing transaction hash on Midnight Preprod indexer.
+5. **Privacy Assurance**: Point out that secret financial inputs (exact income, credit score, salt) were never revealed in the UI or on-chain.
+6. **Passing Tests & CI**: Briefly show terminal with 24 passing tests and GitHub Actions green CI check.
 
 ---
 

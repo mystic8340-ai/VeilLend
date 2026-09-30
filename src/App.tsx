@@ -7,6 +7,8 @@ import { LendingMarket } from './components/LendingMarket';
 import { ActiveLoans } from './components/ActiveLoans';
 import { LiquidityPool } from './components/LiquidityPool';
 import { AuditCompliance } from './components/AuditCompliance';
+import { CircuitCall } from './components/CircuitCall';
+import { WalletConnect } from './components/WalletConnect';
 
 import { CreditTier, LoanRecord, PublicLedgerState, SignedCredential, ZkProofResult } from './midnight/contractTypes';
 import { MidnightDAppConnector, MidnightAccount } from './midnight/dappConnector';
@@ -124,6 +126,13 @@ export const App: React.FC = () => {
               window.history.pushState(null, '', '/');
             }}
           />
+        )}
+
+        {activeTab === 'circuit' && (
+          <div className="max-w-3xl mx-auto space-y-6">
+            <WalletConnect />
+            <CircuitCall />
+          </div>
         )}
 
         {activeTab === 'overview' && (

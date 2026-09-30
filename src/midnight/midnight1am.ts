@@ -94,6 +94,13 @@ export function detect1AMWallet(): Promise<any | null> {
 
 export const detectWallet = detect1AMWallet;
 
+export const PREPROD_NETWORK_ID = 'preprod';
+export const PREPROD_CONTRACT_ADDRESS = '22f0dbac3eae847cc0fdcf59c09b40d2a09955646e3a63e424b01a6d95d94f22';
+export const is1AMInstalled = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return !!((window as any).midnight?.['1am'] || (window as any).midnight?.mnLace);
+};
+
 let currentMidnightNetworkId: string = 'preprod';
 
 export function setMidnightNetworkId(networkId: string): void {

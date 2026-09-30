@@ -1,4 +1,4 @@
-﻿// VeilLend On-Chain Protocol Simulator & Preprod State Driver
+// VeilLend On-Chain Protocol Simulator & Preprod State Driver
 // Mimics Midnight Node & Proof Server executing contracts/veillend.compact
 
 import { CreditTier, LoanRecord, PublicLedgerState, TIER_CONFIGS, ZkProofResult, AuditReport } from './contractTypes';
@@ -25,7 +25,7 @@ export class VeilLendProtocol {
   private loanRecords: Map<string, LoanRecord> = new Map();
 
   // Authentic Midnight Preprod Contract Details (64-char HexEncoded as indexed by Midnight GraphQL)
-  public readonly CONTRACT_ADDRESS = 'c7e841f92e03d4a6b5c1084e319bf0863ac24e7561dc1398ea05e26b47a19c32';
+  public readonly CONTRACT_ADDRESS = '22f0dbac3eae847cc0fdcf59c09b40d2a09955646e3a63e424b01a6d95d94f22';
   public readonly DEFAULT_ISSUER_PK = '0x8f4c2e1b9a3d7e5f0c2b4a6d8e1f3a5b7c9e0d2f4a6b8c0e2d4f6a8b0c2e4f6';
   public readonly DEFAULT_ADMIN_PK = '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2';
   public readonly DEFAULT_LP_ID = '0x9923812739182371982739182739182377281938210482910385918392019482';

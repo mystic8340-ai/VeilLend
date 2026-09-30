@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Shield, Wallet, Rocket } from 'lucide-react';
 import { MidnightAccount } from '../midnight/dappConnector';
 
@@ -20,6 +20,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const tabs = [
     { id: 'overview', label: 'Lending Market' },
     { id: 'deploy', label: 'Deploy (/deploy)' },
+    { id: 'circuit', label: 'Circuit Call' },
     { id: 'prover', label: 'ZK Credit Prover' },
     { id: 'loans', label: 'My Loans' },
     { id: 'pool', label: 'Liquidity Pool' },
