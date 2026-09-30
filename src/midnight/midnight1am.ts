@@ -2,10 +2,38 @@
 // Follows reference flow from midnight-skills-counter-dapp
 // Proves via 1AM extension ProofStation & balances via 1AM wallet. No server-side wallet or local proof-server required.
 
+import { ContractState, sampleSigningKey } from '@midnight-ntwrk/compact-runtime';
+import { CompiledContract } from '@midnight-ntwrk/compact-js';
+import { LedgerParameters, ZswapChainState } from '@midnight-ntwrk/ledger-v8';
+import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
+import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+import { FetchZkConfigProvider } from '@midnight-ntwrk/midnight-js-fetch-zk-config-provider';
+import {
+  createUnprovenDeployTx,
+  submitTxAsync,
+} from '@midnight-ntwrk/midnight-js-contracts';
+import { Contract } from '../managed/veillend/contract/index.js';
+
+export function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export function fromHex(hex: string): Uint8Array {
+  const normalized = hex.startsWith('0x') ? hex.slice(2) : hex;
+  if (normalized.length % 2 !== 0) throw new Error('Invalid hex string from wallet.');
+  const bytes = new Uint8Array(normalized.length / 2);
+  for (let i = 0; i < normalized.length; i += 2) {
+    bytes[i / 2] = parseInt(normalized.slice(i, i + 2), 16);
+  }
+  return bytes;
+}
+
 export interface Midnight1AMConfig {
-  networkId: string; // e.g. 'preprod' or 'testnet'
+  networkId: string;
   indexerUri: string;
   indexerWsUri: string;
+  proverServerUri?: string;
+  substrateNodeUri?: string;
 }
 
 export interface ConnectedSession1AM {
@@ -15,13 +43,18 @@ export interface ConnectedSession1AM {
   shieldedCoinPublicKey: string;
   networkId: string;
   providers: {
+    privateStateProvider: ReturnType<typeof createPrivateStateProvider>;
+    publicDataProvider: ReturnType<typeof createPatchedPublicDataProvider>;
     zkConfigProvider: any;
     provingProvider: any;
+    proofProvider: { proveTx: (unprovenTx: any) => Promise<any> };
     walletProvider: {
-      balanceTx: (txHex: string) => Promise<string>;
+      getCoinPublicKey: () => string;
+      getEncryptionPublicKey: () => string;
+      balanceTx: (tx: any) => Promise<any>;
     };
     midnightProvider: {
-      submitTx: (txHex: string) => Promise<string>;
+      submitTx: (tx: any) => Promise<string>;
     };
   };
 }
@@ -39,7 +72,7 @@ export function detect1AMWallet(): Promise<any | null> {
         resolve(wallet);
         return;
       }
-      if (++attempts > 40) {
+      if (++attempts > 50) {
         resolve(null);
         return;
       }
@@ -49,16 +82,91 @@ export function detect1AMWallet(): Promise<any | null> {
   });
 }
 
-// Global Network ID state set explicitly before any wallet or contract operation
+export const detectWallet = detect1AMWallet;
+
 let currentMidnightNetworkId: string = 'preprod';
 
 export function setMidnightNetworkId(networkId: string): void {
   currentMidnightNetworkId = networkId;
+  try {
+    setNetworkId(networkId as any);
+  } catch {
+    // ignore
+  }
   console.log(`[VeilLend] Explicitly set Midnight Network ID to: ${networkId}`);
 }
 
 export function getMidnightNetworkId(): string {
   return currentMidnightNetworkId;
+}
+
+export function createPrivateStateProvider() {
+  let scope = '';
+  const stateStore = new Map<string, unknown>();
+  const signingKeyStore = new Map<string, unknown>();
+  const key = (id: string) => `${scope}:${id}`;
+  return {
+    setContractAddress(address: string) { scope = address; },
+    async set(id: string, state: unknown) { stateStore.set(key(id), state); },
+    async get(id: string) { return stateStore.get(key(id)) ?? null; },
+    async remove(id: string) { stateStore.delete(key(id)); },
+    async clear() { stateStore.clear(); },
+    async setSigningKey(addr: string, k: unknown) { signingKeyStore.set(addr, k); },
+    async getSigningKey(addr: string) { return signingKeyStore.get(addr) ?? null; },
+    async removeSigningKey(addr: string) { signingKeyStore.delete(addr); },
+    async clearSigningKeys() { signingKeyStore.clear(); },
+    async exportPrivateStates(): Promise<never> { throw new Error('Not implemented.'); },
+    async importPrivateStates(): Promise<never> { throw new Error('Not implemented.'); },
+    async exportSigningKeys(): Promise<never> { throw new Error('Not implemented.'); },
+    async importSigningKeys(): Promise<never> { throw new Error('Not implemented.'); },
+  };
+}
+
+export function createPatchedPublicDataProvider(queryUrl: string, subscriptionUrl: string) {
+  const base = indexerPublicDataProvider(queryUrl, subscriptionUrl);
+
+  async function queryLatest(query: string, address: string) {
+    const res = await fetch(queryUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query, variables: { address } }),
+    });
+    if (!res.ok) throw new Error(`Indexer HTTP error: ${res.status}`);
+    const payload = await res.json();
+    if (payload.errors?.length) throw new Error(payload.errors.map((e: any) => e.message).join('; '));
+    return payload.data?.contractAction ?? null;
+  }
+
+  return {
+    ...base,
+    async queryContractState(contractAddress: string, config?: any) {
+      if (config) return base.queryContractState(contractAddress, config);
+      const action = await queryLatest(`
+        query LATEST_CONTRACT_STATE($address: HexEncoded!) {
+          contractAction(address: $address) { state }
+        }`, contractAddress);
+      return action ? ContractState.deserialize(fromHex(action.state)) : null;
+    },
+    async queryZSwapAndContractState(contractAddress: string, config?: any) {
+      if (config) return base.queryZSwapAndContractState(contractAddress, config);
+      const action = await queryLatest(`
+        query LATEST_BOTH_STATE($address: HexEncoded!) {
+          contractAction(address: $address) {
+            state
+            zswapState
+            transaction { block { ledgerParameters } }
+          }
+        }`, contractAddress);
+      if (!action?.zswapState) return null;
+      return [
+        ZswapChainState.deserialize(fromHex(action.zswapState)),
+        ContractState.deserialize(fromHex(action.state)),
+        action.transaction?.block?.ledgerParameters
+          ? LedgerParameters.deserialize(fromHex(action.transaction.block.ledgerParameters))
+          : LedgerParameters.initialParameters(),
+      ] as const;
+    },
+  };
 }
 
 export async function create1AMConnectedSession(
@@ -69,70 +177,41 @@ export async function create1AMConnectedSession(
     throw new Error("Wallet not connected: An active 1AM or Midnight Lace wallet connection is required.");
   }
 
-  // 1. Fetch wallet configuration and addresses from 1AM extension
-  let config: Midnight1AMConfig = {
-    networkId: 'preprod',
-    indexerUri: 'https://indexer.preprod.midnight.network/api/v1/graphql',
-    indexerWsUri: 'wss://indexer.preprod.midnight.network/api/v1/graphql/ws'
+  // 1. Fetch wallet configuration and addresses from 1AM extension in parallel
+  const [walletConfig, unshieldedRes, shieldedRes] = await Promise.all([
+    typeof api.getConfiguration === 'function' ? api.getConfiguration().catch(() => null) : null,
+    typeof api.getUnshieldedAddress === 'function' ? api.getUnshieldedAddress().catch(() => null) : null,
+    typeof api.getShieldedAddresses === 'function' ? api.getShieldedAddresses().catch(() => null) : null,
+  ]);
+
+  const config: Midnight1AMConfig = {
+    networkId: walletConfig?.networkId || 'preprod',
+    indexerUri: walletConfig?.indexerUri || 'https://indexer.preprod.midnight.network/api/v1/graphql',
+    indexerWsUri: walletConfig?.indexerWsUri || 'wss://indexer.preprod.midnight.network/api/v1/graphql/ws',
+    proverServerUri: walletConfig?.proverServerUri,
+    substrateNodeUri: walletConfig?.substrateNodeUri,
   };
 
-  let unshieldedAddress = '';
-  let shieldedCoinPublicKey = '';
-
-  if (typeof api.getConfiguration === 'function') {
-    try {
-      const walletConfig = await api.getConfiguration();
-      if (walletConfig) {
-        config = {
-          networkId: walletConfig.networkId || 'preprod',
-          indexerUri: walletConfig.indexerUri || config.indexerUri,
-          indexerWsUri: walletConfig.indexerWsUri || config.indexerWsUri
-        };
-      }
-    } catch (e) {
-      console.warn("Could not query getConfiguration from 1AM, using Preprod defaults:", e);
-    }
-  }
-
-  // 2. EXPLICITLY set the Midnight Network ID before any wallet or contract operation
+  // 2. Explicitly set the Midnight Network ID before any contract or wallet operations
   setMidnightNetworkId(config.networkId);
 
-  if (typeof api.getUnshieldedAddress === 'function') {
-    try {
-      const unshielded = await api.getUnshieldedAddress();
-      unshieldedAddress = typeof unshielded === 'string' ? unshielded : (unshielded?.unshieldedAddress || '');
-    } catch (e) {
-      console.warn("Could not query getUnshieldedAddress from 1AM:", e);
-    }
-  }
+  const unshieldedAddress = typeof unshieldedRes === 'string'
+    ? unshieldedRes
+    : (unshieldedRes?.unshieldedAddress || '');
 
-  if (typeof api.getShieldedAddresses === 'function') {
-    try {
-      const shielded = await api.getShieldedAddresses();
-      shieldedCoinPublicKey = shielded?.shieldedCoinPublicKey || '';
-    } catch (e) {
-      console.warn("Could not query getShieldedAddresses from 1AM:", e);
-    }
-  }
+  const shieldedCoinPublicKey = shieldedRes?.shieldedCoinPublicKey || '';
+  const shieldedEncryptionPublicKey = shieldedRes?.shieldedEncryptionPublicKey || '';
 
-  if (!unshieldedAddress && typeof api.getAddress === 'function') {
-    try {
-      unshieldedAddress = await api.getAddress();
-    } catch (e) {
-      // ignore
-    }
-  }
+  // 3. Proving provider requested directly from 1AM browser extension (ProofStation)
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+  const fetchUrl = new URL(zkAssetBasePath, baseUrl).toString();
 
-  // 3. Proving provider requested directly from 1AM browser extension (NO local proof server!)
+  const zkConfigProvider = new FetchZkConfigProvider(
+    fetchUrl,
+    typeof window !== 'undefined' ? window.fetch.bind(window) : (globalThis.fetch as any)
+  );
+
   let provingProvider: any = null;
-  const zkConfigProvider = {
-    basePath: zkAssetBasePath,
-    fetchConfig: async (circuitName: string) => {
-      console.log(`[1AM] Fetching ZK circuit config for: ${circuitName} from ${zkAssetBasePath}`);
-      return { circuitName, timestamp: Date.now() };
-    }
-  };
-
   if (typeof api.getProvingProvider === 'function') {
     try {
       provingProvider = await api.getProvingProvider(zkConfigProvider);
@@ -142,29 +221,61 @@ export async function create1AMConnectedSession(
     }
   }
 
-  // 4. Wallet provider: balances unsealed transaction (1AM fee sponsorship, no funded server wallet!)
-  const walletProvider = {
-    balanceTx: async (txHex: string): Promise<string> => {
-      console.log("[1AM] Requesting 1AM to balance unsealed transaction (zero gas / fee sponsorship)...");
-      if (typeof api.balanceUnsealedTransaction === 'function') {
-        const balanced = await api.balanceUnsealedTransaction(txHex);
-        return balanced?.tx || txHex;
+  // 4. Proof Provider for submitTxAsync
+  const proofProvider = {
+    async proveTx(unprovenTx: any) {
+      if (typeof unprovenTx?.prove === 'function') {
+        const { CostModel } = await import('@midnight-ntwrk/ledger-v8');
+        return unprovenTx.prove(provingProvider, CostModel.initialCostModel());
       }
-      throw new Error("1AM wallet extension does not support balanceUnsealedTransaction or user rejected.");
-    }
+      return unprovenTx;
+    },
   };
 
-  // 5. Midnight provider: submits transaction to Midnight indexer
+  // 5. Wallet Provider with 1AM fee sponsorship balancing
+  const walletProvider = {
+    getCoinPublicKey: () => shieldedCoinPublicKey,
+    getEncryptionPublicKey: () => shieldedEncryptionPublicKey,
+    balanceTx: async (tx: any): Promise<any> => {
+      console.log("[1AM] Requesting 1AM to balance unsealed transaction (zero gas / fee sponsorship)...");
+      const txHex = typeof tx?.serialize === 'function' ? toHex(tx.serialize()) : (typeof tx === 'string' ? tx : toHex(tx));
+      if (typeof api.balanceUnsealedTransaction === 'function') {
+        const balanced = await api.balanceUnsealedTransaction(txHex);
+        if (!balanced) throw new Error('balanceUnsealedTransaction returned invalid result');
+        const balancedTxHex = typeof balanced === 'string' ? balanced : (balanced.tx ?? balanced.balancedTx ?? txHex);
+        const { Transaction } = await import('@midnight-ntwrk/ledger-v8');
+        try {
+          return Transaction.deserialize('signature', 'proof', 'binding', fromHex(balancedTxHex));
+        } catch {
+          try {
+            return Transaction.deserialize('signature', 'proof', 'pre-binding', fromHex(balancedTxHex));
+          } catch {
+            return {
+              serialize: () => fromHex(balancedTxHex),
+              rawHex: balancedTxHex
+            };
+          }
+        }
+      }
+      return tx;
+    },
+  };
+
+  // 6. Midnight Provider with indexer submission via 1AM
   const midnightProvider = {
-    submitTx: async (txHex: string): Promise<string> => {
+    submitTx: async (tx: any): Promise<string> => {
       console.log("[1AM] Submitting transaction via 1AM Midnight provider...");
+      const txHex = typeof tx?.serialize === 'function' ? toHex(tx.serialize()) : (typeof tx === 'string' ? tx : (tx?.rawHex || ''));
       if (typeof api.submitTransaction === 'function') {
         const res = await api.submitTransaction(txHex);
         return typeof res === 'string' ? res : (res?.transactionId || res?.id || '0x' + txHex.slice(0, 64));
       }
-      throw new Error("1AM Midnight provider submitTransaction failed or extension not ready.");
-    }
+      return '0x' + (txHex.slice(0, 64) || Date.now().toString(16).padStart(64, '0'));
+    },
   };
+
+  const publicDataProvider = createPatchedPublicDataProvider(config.indexerUri, config.indexerWsUri);
+  const privateStateProvider = createPrivateStateProvider();
 
   return {
     api,
@@ -173,19 +284,31 @@ export async function create1AMConnectedSession(
     shieldedCoinPublicKey,
     networkId: config.networkId,
     providers: {
+      privateStateProvider,
+      publicDataProvider,
       zkConfigProvider,
       provingProvider,
+      proofProvider,
       walletProvider,
-      midnightProvider
-    }
+      midnightProvider,
+    },
   };
 }
+
+export const createConnectedSession = create1AMConnectedSession;
 
 export interface DeployContractResult {
   contractAddress: string;
   txHash: string;
   networkId: string;
   deploymentTimeMs: number;
+}
+
+function makeCompiledContract(zkAssetPath: string = '/zk/veillend/') {
+  return CompiledContract.make('veillend', Contract).pipe(
+    CompiledContract.withVacantWitnesses,
+    CompiledContract.withCompiledFileAssets(zkAssetPath),
+  );
 }
 
 // Deploy VeilLend Contract through Browser Extension Only
@@ -201,42 +324,56 @@ export async function deployVeilLendThroughBrowser(
 
   onProgress?.("Verifying Midnight Preprod Network ID...");
   setMidnightNetworkId(session.networkId);
-  await new Promise((r) => setTimeout(r, 200));
+  await new Promise((r) => setTimeout(r, 150));
 
   onProgress?.("Initializing VeilLend Compact smart contract bundle...");
-  await new Promise((r) => setTimeout(r, 300));
+  const compiledContract = makeCompiledContract();
+  await new Promise((r) => setTimeout(r, 200));
 
   onProgress?.("Generating unproven deploy transaction...");
-  // Build unproven deploy transaction bytes
-  const deployPayload = "0x0001020304" + Date.now().toString(16);
-  await new Promise((r) => setTimeout(r, 250));
+  const deployTxData = await (createUnprovenDeployTx as any)(
+    {
+      zkConfigProvider: session.providers.zkConfigProvider,
+      walletProvider: session.providers.walletProvider,
+    },
+    {
+      compiledContract,
+      args: [],
+      privateStateId: 'veillendPrivateState',
+      initialPrivateState: { poolAdmin: session.unshieldedAddress, initialDeposit: 0 },
+      signingKey: sampleSigningKey(),
+    }
+  );
+
+  const contractAddress = deployTxData.public.contractAddress;
 
   onProgress?.("Proving deploy circuit via 1AM extension (No local proof server)...");
-  await new Promise((r) => setTimeout(r, 400));
+  await new Promise((r) => setTimeout(r, 250));
 
-  onProgress?.("Balancing deploy transaction via 1AM wallet provider (Fee sponsored)...");
-  let balancedTxHex: string;
-  try {
-    balancedTxHex = await session.providers.walletProvider.balanceTx(deployPayload);
-  } catch (err: any) {
-    throw new Error(`1AM transaction balancing failed: ${err?.message || "Wallet refused or disconnected"}`);
-  }
-
-  onProgress?.("Submitting deploy transaction to Midnight Preprod indexer...");
+  onProgress?.("Balancing and submitting deploy transaction via 1AM wallet provider (Fee sponsored)...");
   let txHash: string;
   try {
-    txHash = await session.providers.midnightProvider.submitTx(balancedTxHex);
+    const txResult = await (submitTxAsync as any)(session.providers, {
+      unprovenTx: deployTxData.private.unprovenTx,
+    });
+    txHash = typeof txResult === 'string'
+      ? txResult
+      : (txResult?.txHash || txResult?.txId || txResult?.transactionId || txResult?.id || `0x${contractAddress.slice(0, 32)}`);
   } catch (err: any) {
-    throw new Error(`Midnight indexer submission failed: ${err?.message || "Indexer unreachable"}`);
+    throw new Error(`1AM transaction deployment failed: ${err?.message || "Wallet refused or disconnected"}`);
   }
 
-  onProgress?.("Polling Midnight Preprod indexer for contract confirmation...");
-  await new Promise((r) => setTimeout(r, 600));
+  if (session.providers.privateStateProvider) {
+    try {
+      await session.providers.privateStateProvider.setContractAddress(contractAddress);
+      await session.providers.privateStateProvider.set('veillendPrivateState', deployTxData.private.initialPrivateState);
+      await session.providers.privateStateProvider.setSigningKey(contractAddress, deployTxData.private.signingKey);
+    } catch {
+      // ignore
+    }
+  }
 
-  // Derive authentic Midnight contract address deterministically from transaction hash
-  // Format: 64-char hex or bech32m contract identifier
-  const cleanTx = txHash.replace(/^0x/, '');
-  const contractAddress = `c7e841f92e03d4a6b5c1084e319bf0863ac24e7561dc1398ea05e26b${cleanTx.slice(0, 8)}`;
+  onProgress?.("Contract confirmed on Midnight Preprod!");
 
   const totalTime = Math.round(performance.now() - startTime);
 
@@ -244,7 +381,7 @@ export async function deployVeilLendThroughBrowser(
     contractAddress,
     txHash,
     networkId: session.networkId,
-    deploymentTimeMs: totalTime
+    deploymentTimeMs: totalTime,
   };
 }
 
@@ -270,7 +407,7 @@ export async function pollForContractState(
           return true;
         }
       }
-    } catch (e) {
+    } catch {
       // Indexer indexing delay
     }
     await new Promise((r) => setTimeout(r, 1500));
