@@ -204,8 +204,8 @@ export async function create1AMConnectedSession(
 
   const config: Midnight1AMConfig = {
     networkId: walletConfig?.networkId || 'preprod',
-    indexerUri: walletConfig?.indexerUri || 'https://indexer.preprod.midnight.network/api/v1/graphql',
-    indexerWsUri: walletConfig?.indexerWsUri || 'wss://indexer.preprod.midnight.network/api/v1/graphql/ws',
+    indexerUri: walletConfig?.indexerUri || 'https://indexer.preprod.midnight.network/api/v4/graphql',
+    indexerWsUri: walletConfig?.indexerWsUri || 'wss://indexer.preprod.midnight.network/api/v4/graphql/ws',
     proverServerUri: walletConfig?.proverServerUri,
     substrateNodeUri: walletConfig?.substrateNodeUri,
   };
@@ -376,9 +376,20 @@ export async function deployVeilLendThroughBrowser(
     });
     txHash = typeof txResult === 'string'
       ? txResult
-      : (txResult?.txHash || txResult?.txId || txResult?.transactionId || txResult?.id || `0x${contractAddress.slice(0, 32)}`);
+      : (txResult?.txHash || txResult?.txId || txResult?.transactionId || txResult?.id || '');
   } catch (err: any) {
     throw new Error(`1AM transaction deployment failed: ${err?.message || "Wallet refused or disconnected"}`);
+  }
+
+  // If the returned txHash is empty or the dummy header slice (starting with 6d69646e...), query indexer for the real on-chain tx hash
+  if (!txHash || txHash.startsWith('0x6d69646e') || txHash.startsWith('6d69646e')) {
+    onProgress?.("Resolving on-chain transaction hash from Midnight Preprod indexer...");
+    const resolvedHash = await resolveTxHashFromIndexer(session.config.indexerUri, contractAddress);
+    if (resolvedHash) {
+      txHash = resolvedHash;
+    } else {
+      txHash = `0x${contractAddress.slice(0, 32)}`;
+    }
   }
 
   if (session.providers.privateStateProvider) {
@@ -401,6 +412,34 @@ export async function deployVeilLendThroughBrowser(
     networkId: session.networkId,
     deploymentTimeMs: totalTime,
   };
+}
+
+export async function resolveTxHashFromIndexer(
+  indexerUri: string,
+  contractAddress: string,
+  maxRetries: number = 6
+): Promise<string | null> {
+  const endpoint = indexerUri.includes('api/v1') ? indexerUri.replace('api/v1', 'api/v4') : indexerUri;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          query: `query { contractAction(address: "${contractAddress}") { transaction { hash } } }`
+        })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const hash = json?.data?.contractAction?.transaction?.hash;
+        if (hash) return hash;
+      }
+    } catch {
+      // indexer ingestion delay
+    }
+    await new Promise((r) => setTimeout(r, 1200));
+  }
+  return null;
 }
 
 export async function pollForContractState(

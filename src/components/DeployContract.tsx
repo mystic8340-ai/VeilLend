@@ -281,13 +281,24 @@ export const DeployContract: React.FC<DeployContractProps> = ({
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-400 font-semibold uppercase">Deployed Contract Address:</span>
-                  <button
-                    onClick={() => handleCopy(deployResult.contractAddress)}
-                    className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-xs font-mono"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>{copied ? 'Copied!' : 'Copy Address'}</span>
-                  </button>
+                  <div className="flex items-center space-x-3">
+                    <a
+                      href={`https://explorer.1am.xyz/contract/${deployResult.contractAddress}?network=preprod`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-xs font-mono transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>1AM Explorer</span>
+                    </a>
+                    <button
+                      onClick={() => handleCopy(deployResult.contractAddress)}
+                      className="flex items-center space-x-1 text-emerald-400 hover:text-emerald-300 text-xs font-mono transition-colors"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>{copied ? 'Copied!' : 'Copy Address'}</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="font-mono text-sm font-bold text-emerald-300 break-all select-all">
                   {deployResult.contractAddress}
@@ -295,14 +306,46 @@ export const DeployContract: React.FC<DeployContractProps> = ({
               </div>
 
               {/* Metadata Details */}
-              <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-                <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800/80">
-                  <span className="text-slate-500 block">Transaction Hash:</span>
-                  <span className="text-slate-300 break-all text-[11px]">{deployResult.txHash}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800/80 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Transaction Hash:</span>
+                    {deployResult.txHash && !deployResult.txHash.startsWith('0x6d69646e') && (
+                      <a
+                        href={`https://explorer.1am.xyz/tx/${deployResult.txHash.replace(/^0x/, '')}?network=preprod`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-cyan-400 hover:text-cyan-300 inline-flex items-center space-x-1 text-[11px]"
+                      >
+                        <span>View Tx</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                  <span className="text-slate-300 break-all text-[11px] block">{deployResult.txHash}</span>
                 </div>
-                <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800/80">
-                  <span className="text-slate-500 block">Network:</span>
-                  <span className="text-cyan-300 font-semibold">Midnight Preprod ({deployResult.networkId})</span>
+                <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800/80 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Network:</span>
+                    <a
+                      href={`https://explorer.1am.xyz/contract/${deployResult.contractAddress}?network=preprod`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-emerald-400 hover:text-emerald-300 inline-flex items-center space-x-1 text-[11px]"
+                    >
+                      <span>Preprod Explorer</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                  <span className="text-cyan-300 font-semibold block">Midnight Preprod ({deployResult.networkId})</span>
+                </div>
+              </div>
+
+              {/* 1AM Explorer Guidance Banner */}
+              <div className="p-3.5 rounded-xl bg-slate-950/90 border border-cyan-500/20 text-xs text-slate-300 flex items-start space-x-2.5">
+                <Globe className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                <div className="leading-relaxed text-[11px]">
+                  <strong className="text-white">1AM Explorer Note:</strong> If 1AM Explorer shows <em>&ldquo;Transaction not found&rdquo;</em>, click the network dropdown in the top-right header (currently on <strong>Mainnet</strong>) and switch it to <strong className="text-amber-300">Preprod</strong>. Midnight transactions only exist on the specific network they were deployed to.
                 </div>
               </div>
 
