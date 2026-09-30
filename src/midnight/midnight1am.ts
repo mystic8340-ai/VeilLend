@@ -2,6 +2,16 @@
 // Follows reference flow from midnight-skills-counter-dapp
 // Proves via 1AM extension ProofStation & balances via 1AM wallet. No server-side wallet or local proof-server required.
 
+import { Buffer } from 'buffer';
+
+if (typeof window !== 'undefined') {
+  (window as any).Buffer = Buffer;
+  (window as any).global = window;
+}
+if (typeof globalThis !== 'undefined' && !(globalThis as any).Buffer) {
+  (globalThis as any).Buffer = Buffer;
+}
+
 import { ContractState, sampleSigningKey } from '@midnight-ntwrk/compact-runtime';
 import { CompiledContract } from '@midnight-ntwrk/compact-js';
 import { LedgerParameters, ZswapChainState } from '@midnight-ntwrk/ledger-v8';
@@ -123,7 +133,15 @@ export function createPrivateStateProvider() {
 }
 
 export function createPatchedPublicDataProvider(queryUrl: string, subscriptionUrl: string) {
-  const base = indexerPublicDataProvider(queryUrl, subscriptionUrl);
+  let base: any = null;
+  const hasWebSocket = typeof WebSocket !== 'undefined' || typeof (globalThis as any).WebSocket !== 'undefined';
+  if (hasWebSocket) {
+    try {
+      base = indexerPublicDataProvider(queryUrl, subscriptionUrl);
+    } catch (e) {
+      console.warn('[1AM] indexerPublicDataProvider init bypassed:', e);
+    }
+  }
 
   async function queryLatest(query: string, address: string) {
     const res = await fetch(queryUrl, {
@@ -138,9 +156,9 @@ export function createPatchedPublicDataProvider(queryUrl: string, subscriptionUr
   }
 
   return {
-    ...base,
+    ...(base || {}),
     async queryContractState(contractAddress: string, config?: any) {
-      if (config) return base.queryContractState(contractAddress, config);
+      if (config && base?.queryContractState) return base.queryContractState(contractAddress, config);
       const action = await queryLatest(`
         query LATEST_CONTRACT_STATE($address: HexEncoded!) {
           contractAction(address: $address) { state }
@@ -148,7 +166,7 @@ export function createPatchedPublicDataProvider(queryUrl: string, subscriptionUr
       return action ? ContractState.deserialize(fromHex(action.state)) : null;
     },
     async queryZSwapAndContractState(contractAddress: string, config?: any) {
-      if (config) return base.queryZSwapAndContractState(contractAddress, config);
+      if (config && base?.queryZSwapAndContractState) return base.queryZSwapAndContractState(contractAddress, config);
       const action = await queryLatest(`
         query LATEST_BOTH_STATE($address: HexEncoded!) {
           contractAction(address: $address) {

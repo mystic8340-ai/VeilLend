@@ -8,8 +8,12 @@ export default defineConfig({
   resolve: {
     alias: {
       'isomorphic-ws': path.resolve(__dirname, 'src/midnight/isomorphic-ws-fix.mjs'),
-      '@': path.resolve(__dirname, 'src')
+      '@': path.resolve(__dirname, 'src'),
+      buffer: 'buffer',
     }
+  },
+  define: {
+    'global': 'globalThis',
   },
   build: {
     target: 'esnext'
