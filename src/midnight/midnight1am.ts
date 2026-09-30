@@ -384,11 +384,11 @@ export async function deployVeilLendThroughBrowser(
   // If the returned txHash is empty or the dummy header slice (starting with 6d69646e...), query indexer for the real on-chain tx hash
   if (!txHash || txHash.startsWith('0x6d69646e') || txHash.startsWith('6d69646e')) {
     onProgress?.("Resolving on-chain transaction hash from Midnight Preprod indexer...");
-    const resolvedHash = await resolveTxHashFromIndexer(session.config.indexerUri, contractAddress);
+    const resolvedHash = await resolveTxHashFromIndexer(session.config.indexerUri, contractAddress, 10, 1500);
     if (resolvedHash) {
       txHash = resolvedHash;
     } else {
-      txHash = `0x${contractAddress.slice(0, 32)}`;
+      txHash = '';
     }
   }
 
@@ -417,7 +417,8 @@ export async function deployVeilLendThroughBrowser(
 export async function resolveTxHashFromIndexer(
   indexerUri: string,
   contractAddress: string,
-  maxRetries: number = 6
+  maxRetries: number = 20,
+  intervalMs: number = 2000
 ): Promise<string | null> {
   const endpoint = indexerUri.includes('api/v1') ? indexerUri.replace('api/v1', 'api/v4') : indexerUri;
   for (let i = 0; i < maxRetries; i++) {
@@ -432,12 +433,12 @@ export async function resolveTxHashFromIndexer(
       if (res.ok) {
         const json = await res.json();
         const hash = json?.data?.contractAction?.transaction?.hash;
-        if (hash) return hash;
+        if (hash && hash.length === 64) return hash;
       }
     } catch {
       // indexer ingestion delay
     }
-    await new Promise((r) => setTimeout(r, 1200));
+    await new Promise((r) => setTimeout(r, intervalMs));
   }
   return null;
 }

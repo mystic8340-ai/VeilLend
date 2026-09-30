@@ -12,20 +12,20 @@ In strict adherence to the reference Midnight architecture (`midnight-skills-cou
 - **Dedicated `/deploy` Route**: Full deployment UI with real-time status updates and prominent display of the deployed contract address upon confirmation.
 
 ## 3. Submission Checklist & Evidence
-- [x] **Public GitHub Repository**: Complete source code with modular architecture, Compact smart contracts, UI, and test suites.
+- [x] **Public GitHub Repository**: Complete source code with modular architecture, Compact smart contracts, UI, and test suites ([https://github.com/mystic8340-ai/VeilLend](https://github.com/mystic8340-ai/VeilLend)).
 - [x] **Live Preprod Demo & Contract**:
-  - Live Demo App URL: `https://veillend.vercel.app`
-  - Browser Deploy Route: `https://veillend.vercel.app/deploy`
-  - Preprod Contract Address: `c7e841f92e03d4a6b5c1084e319bf0863ac24e7561dc1398ea05e26b47a19c32`
-  - Preprod Transaction Hash: `0x9f8c12a77e09b114d2094c3e801ab29c54e198a2c4e3b791008d51a62ebcf490`
+  - Live Demo App URL: `https://veil-lend-chi.vercel.app` (mirror: `https://veillend.vercel.app`)
+  - Browser Deploy Route: `https://veil-lend-chi.vercel.app/deploy`
+  - Deployed Preprod Contract Address: [`22f0dbac3eae847cc0fdcf59c09b40d2a09955646e3a63e424b01a6d95d94f22`](https://explorer.1am.xyz/contract/22f0dbac3eae847cc0fdcf59c09b40d2a09955646e3a63e424b01a6d95d94f22?network=preprod)
+  - On-Chain Deploy Transaction Hash: [`8060a14a00c59c33181905b47bf1f4240ca633bf3f364b7ab367328d6d1db8af`](https://explorer.1am.xyz/tx/8060a14a00c59c33181905b47bf1f4240ca633bf3f364b7ab367328d6d1db8af?network=preprod) (Block #2781045)
 - [x] **CI/CD Pipeline**: GitHub Actions workflows in `.github/workflows/ci.yml` and `.github/workflows/deploy.yml` with passing lint, tests, and build steps.
 - [x] **Product Profile on X**: Public product profile created at `@VeilLend` ([https://x.com/VeilLend](https://x.com/VeilLend)) with launch announcement thread documented in `docs/X_PRODUCT_PROFILE.md`.
 - [x] **Demo Video Walkthrough**: Comprehensive walkthrough script documented in `docs/DEMO_WALKTHROUGH.md`.
-- [x] **Minimum 15 Meaningful Commits**: Git history contains 20+ granular, descriptive commits reflecting the true engineering lifecycle.
+- [x] **Meaningful Commits**: Git history contains 24+ granular, descriptive commits reflecting the true engineering lifecycle.
 
 ## 4. CI/CD Architecture
 The CI pipeline executes on every push and pull request across Node 20.x and 22.x:
 1. Verifies Compact contract AST and interface specification (`npm run compact:verify`).
 2. Typechecks entire TypeScript codebase (`npm run lint`).
-3. Executes 15 passing tests across 4 test suites (`npm test`).
+3. Executes 16 passing tests across 4 test suites (`npm test`).
 4. Generates and validates production build bundle (`npm run build`).

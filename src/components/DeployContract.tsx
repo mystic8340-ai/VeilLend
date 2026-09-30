@@ -17,7 +17,8 @@ import {
   deployVeilLendThroughBrowser, 
   ConnectedSession1AM, 
   DeployContractResult,
-  getMidnightNetworkId
+  getMidnightNetworkId,
+  resolveTxHashFromIndexer
 } from '../midnight/midnight1am';
 
 interface DeployContractProps {
@@ -35,6 +36,7 @@ export const DeployContract: React.FC<DeployContractProps> = ({
   const [isDeploying, setIsDeploying] = useState<boolean>(false);
   const [deployStep, setDeployStep] = useState<string>('');
   const [deployResult, setDeployResult] = useState<DeployContractResult | null>(null);
+  const [resolvedTxHash, setResolvedTxHash] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -46,6 +48,47 @@ export const DeployContract: React.FC<DeployContractProps> = ({
       }
     });
   }, []);
+
+  // Poll for genuine on-chain tx hash from Midnight Preprod indexer if not yet available
+  useEffect(() => {
+    if (!deployResult) {
+      setResolvedTxHash('');
+      return;
+    }
+    const raw = (deployResult.txHash || '').replace(/^0x/, '');
+    if (raw && raw.length === 64 && !raw.startsWith('6d69646e')) {
+      setResolvedTxHash(raw);
+      return;
+    }
+    let cancelled = false;
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      if (attempts > 30 || cancelled) {
+        clearInterval(interval);
+        return;
+      }
+      try {
+        const hash = await resolveTxHashFromIndexer(
+          session?.config?.indexerUri || 'https://indexer.preprod.midnight.network/api/v4/graphql',
+          deployResult.contractAddress,
+          1,
+          500
+        );
+        if (hash && hash.length === 64 && !cancelled) {
+          setResolvedTxHash(hash);
+          clearInterval(interval);
+        }
+      } catch {
+        // continue polling
+      }
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [deployResult, session]);
 
   const handleConnectWallet = async () => {
     setIsConnecting(true);
@@ -310,9 +353,9 @@ export const DeployContract: React.FC<DeployContractProps> = ({
                 <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800/80 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">Transaction Hash:</span>
-                    {deployResult.txHash && !deployResult.txHash.startsWith('0x6d69646e') && (
+                    {resolvedTxHash ? (
                       <a
-                        href={`https://explorer.1am.xyz/tx/${deployResult.txHash.replace(/^0x/, '')}?network=preprod`}
+                        href={`https://explorer.1am.xyz/tx/${resolvedTxHash}?network=preprod`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-cyan-400 hover:text-cyan-300 inline-flex items-center space-x-1 text-[11px]"
@@ -320,9 +363,22 @@ export const DeployContract: React.FC<DeployContractProps> = ({
                         <span>View Tx</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
+                    ) : (
+                      <span className="text-amber-400/80 text-[10px] animate-pulse flex items-center space-x-1">
+                        <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                        <span>Indexing on Preprod...</span>
+                      </span>
                     )}
                   </div>
-                  <span className="text-slate-300 break-all text-[11px] block">{deployResult.txHash}</span>
+                  <span className="text-slate-300 break-all text-[11px] block font-mono">
+                    {resolvedTxHash ? (
+                      `0x${resolvedTxHash}`
+                    ) : (
+                      <span className="text-slate-500 italic text-[10px]">
+                        Waiting for block confirmation (~15s)...
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800/80 space-y-1">
                   <div className="flex items-center justify-between">
@@ -333,7 +389,7 @@ export const DeployContract: React.FC<DeployContractProps> = ({
                       rel="noreferrer"
                       className="text-emerald-400 hover:text-emerald-300 inline-flex items-center space-x-1 text-[11px]"
                     >
-                      <span>Preprod Explorer</span>
+                      <span>Contract on Explorer</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
@@ -341,11 +397,53 @@ export const DeployContract: React.FC<DeployContractProps> = ({
                 </div>
               </div>
 
+              {/* Direct 1AM Explorer Action Links */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <a
+                  href={`https://explorer.1am.xyz/contract/${deployResult.contractAddress}?network=preprod`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="py-2.5 px-3 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 font-semibold flex items-center justify-center space-x-2 transition-all"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open Contract on 1AM Explorer</span>
+                </a>
+                {resolvedTxHash ? (
+                  <a
+                    href={`https://explorer.1am.xyz/tx/${resolvedTxHash}?network=preprod`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-2.5 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 font-semibold flex items-center justify-center space-x-2 transition-all"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Open Transaction on 1AM Explorer</span>
+                  </a>
+                ) : (
+                  <div className="py-2.5 px-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 flex items-center justify-center space-x-2 text-xs">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>Resolving Tx link in block...</span>
+                  </div>
+                )}
+              </div>
+
               {/* 1AM Explorer Guidance Banner */}
-              <div className="p-3.5 rounded-xl bg-slate-950/90 border border-cyan-500/20 text-xs text-slate-300 flex items-start space-x-2.5">
-                <Globe className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
-                <div className="leading-relaxed text-[11px]">
-                  <strong className="text-white">1AM Explorer Note:</strong> If 1AM Explorer shows <em>&ldquo;Transaction not found&rdquo;</em>, click the network dropdown in the top-right header (currently on <strong>Mainnet</strong>) and switch it to <strong className="text-amber-300">Preprod</strong>. Midnight transactions only exist on the specific network they were deployed to.
+              <div className="p-3.5 rounded-xl bg-slate-950/90 border border-cyan-500/20 text-xs text-slate-300 space-y-1.5">
+                <div className="flex items-start space-x-2">
+                  <Globe className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                  <div className="leading-relaxed text-[11px] space-y-1">
+                    <div className="font-semibold text-white">How 1AM Explorer routes work:</div>
+                    <ul className="list-disc list-inside space-y-0.5 text-slate-300">
+                      <li>
+                        <strong>Contract View:</strong> Use <code className="text-cyan-300 bg-slate-900 px-1 py-0.5 rounded">/contract/&lt;address&gt;</code> (click <em>&ldquo;Open Contract on 1AM Explorer&rdquo;</em> above).
+                      </li>
+                      <li>
+                        <strong>Transaction View:</strong> Use <code className="text-purple-300 bg-slate-900 px-1 py-0.5 rounded">/tx/&lt;txHash&gt;</code> with the 32-byte cryptographic transaction ID once confirmed on-chain.
+                      </li>
+                      <li>
+                        <strong>Network Selector:</strong> If 1AM Explorer displays <em>&ldquo;Transaction not found&rdquo;</em>, verify the top-right network pill is set to <strong className="text-amber-300">Preprod</strong> (amber dot) and not Mainnet.
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
 

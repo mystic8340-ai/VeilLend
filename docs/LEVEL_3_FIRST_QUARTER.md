@@ -36,15 +36,15 @@ VeilLend maintains a comprehensive **Vitest** test suite organized into unit mod
 
 ---
 
-## 3. Test Execution Results (15 Passing Tests)
+## 3. Test Execution Results (16 Passing Tests)
 ```bash
- ✓ tests/MidnightDAppIntegration.test.ts (3 tests)
+ ✓ tests/MidnightDAppIntegration.test.ts (4 tests)
  ✓ tests/CompactContract.test.ts (4 tests)
  ✓ tests/LendingPool.test.ts (3 tests)
  ✓ tests/ZkCreditProver.test.ts (5 tests)
 
  Test Files  4 passed (4)
-      Tests  15 passed (15)
+      Tests  16 passed (16)
 ```
 
 ---

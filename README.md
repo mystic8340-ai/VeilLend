@@ -9,9 +9,10 @@
 
 **VeilLend** is a confidential, risk-adjusted lending protocol built on the **Midnight Network** that allows borrowers to prove their creditworthiness (income thresholds, clean repayment history, credit tiers) using zero-knowledge proofs without exposing their raw financial data or wallet identity to the public ledger.
 
-- 🌐 **Live Preprod Demo**: [https://veillend.vercel.app](https://veillend.vercel.app)
-- 🚀 **Browser Contract Deploy Route**: [https://veillend.vercel.app/deploy](https://veillend.vercel.app/deploy) (or local `http://localhost:3000/deploy`)
-- 📜 **Preprod Contract Address**: `c7e841f92e03d4a6b5c1084e319bf0863ac24e7561dc1398ea05e26b47a19c32`
+- 🌐 **Live Preprod Demo**: [https://veil-lend-chi.vercel.app](https://veil-lend-chi.vercel.app) (mirror: [https://veillend.vercel.app](https://veillend.vercel.app))
+- 🚀 **Browser Contract Deploy Route**: [https://veil-lend-chi.vercel.app/deploy](https://veil-lend-chi.vercel.app/deploy) (or local `http://localhost:3000/deploy`)
+- 📜 **Deployed Preprod Contract**: [`4d382e47a17a0d5ce268d2904ba3b0b48c86b91d56dd6b9157a3a4fce111ea49`](https://explorer.1am.xyz/contract/4d382e47a17a0d5ce268d2904ba3b0b48c86b91d56dd6b9157a3a4fce111ea49?network=preprod)
+- 🔗 **On-Chain Deploy Tx Hash**: [`7f32b81f2f01cca405fcf49ef3c6f40d4050eb9cda63b8683a78fa38b2ca6264`](https://explorer.1am.xyz/tx/7f32b81f2f01cca405fcf49ef3c6f40d4050eb9cda63b8683a78fa38b2ca6264?network=preprod)
 - 🐦 **Product Profile on X**: [@VeilLend](https://x.com/VeilLend)
 - 📹 **Demo Walkthrough Video Script**: [docs/DEMO_WALKTHROUGH.md](docs/DEMO_WALKTHROUGH.md)
 
@@ -73,11 +74,11 @@ VeilLend directly fulfills the **"Credentials"** and **"Eligibility"** categorie
 - **Proving Provider**: 1AM Extension ProofStation (Zero local proof server required)
 - **ZK Circuit Engine**: In-circuit mathematical constraints, Pedersen commitments, and Poseidon nullifiers (`src/midnight/zkProofEngine.ts`)
 - **Frontend**: React 18, Vite, TypeScript, TailwindCSS, Lucide Icons
-- **Testing**: Vitest suite with **15 passing tests across 4 test suites** (`tests/`):
+- **Testing**: Vitest suite with **16 passing tests across 4 test suites** (`tests/`):
   - `CompactContract.test.ts` (4 unit tests): Ledger state, LP accounting, withdrawals & solvency
   - `ZkCreditProver.test.ts` (5 unit tests): In-circuit constraints, forged signatures & nullifiers
   - `LendingPool.test.ts` (3 unit tests): Undercollateralized loans, double-spending prevention & repayment
-  - `MidnightDAppIntegration.test.ts` (3 integration tests): DApp connector authentication & contract AST specification
+  - `MidnightDAppIntegration.test.ts` (4 integration tests): DApp connector authentication, Network ID & transaction balancing
 - **CI/CD**: GitHub Actions workflows for continuous integration (`ci.yml`), Compact AST verification (`compact:verify`), and preprod release packaging (`deploy.yml`)
 
 ---
@@ -87,7 +88,7 @@ VeilLend directly fulfills the **"Credentials"** and **"Eligibility"** categorie
 ### 1. Clone & Install
 ```bash
 git clone https://github.com/mystic8340-ai/VeilLend.git
-cd veillend
+cd VeilLend
 npm install
 ```
 
@@ -96,7 +97,7 @@ npm install
 npm run compact:verify
 ```
 
-### 3. Run Test Suite (15 Passing Tests)
+### 3. Run Test Suite (16 Passing Tests)
 ```bash
 npm test
 ```

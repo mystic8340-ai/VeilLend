@@ -23,10 +23,11 @@ Credentials & Eligibility / Confidential DeFi
 ---
 
 ### Task: Level 4 Submission Checklist
-- **Public GitHub Repository**: Repository containing full documentation, Compact smart contracts, frontend, and tests.
-- **Live Preprod Demo Link**: `https://veillend.vercel.app`
-- **Preprod Contract Address**: `c7e841f92e03d4a6b5c1084e319bf0863ac24e7561dc1398ea05e26b47a19c32`
+- **Public GitHub Repository**: [https://github.com/mystic8340-ai/VeilLend](https://github.com/mystic8340-ai/VeilLend)
+- **Live Preprod Demo Link**: [https://veil-lend-chi.vercel.app](https://veil-lend-chi.vercel.app)
+- **Deployed Preprod Contract Address**: [`22f0dbac3eae847cc0fdcf59c09b40d2a09955646e3a63e424b01a6d95d94f22`](https://explorer.1am.xyz/contract/22f0dbac3eae847cc0fdcf59c09b40d2a09955646e3a63e424b01a6d95d94f22?network=preprod)
+- **On-Chain Preprod Deploy Tx Hash**: [`8060a14a00c59c33181905b47bf1f4240ca633bf3f364b7ab367328d6d1db8af`](https://explorer.1am.xyz/tx/8060a14a00c59c33181905b47bf1f4240ca633bf3f364b7ab367328d6d1db8af?network=preprod) (Block #2781045)
 - **CI/CD Badge / Workflow**: `.github/workflows/ci.yml` (Passing automated lint, test, and build runs across Node 20.x and 22.x)
 - **Product Profile on X**: `https://x.com/VeilLend` (@VeilLend)
 - **Demo Video Walkthrough**: `docs/DEMO_WALKTHROUGH.md`
-- **Minimum 15 Meaningful Commits**: Verified 20+ granular, descriptive commits in git history.
+- **Meaningful Commits**: 24+ granular, descriptive commits in git history strictly authored by `mystic8340-ai`.
