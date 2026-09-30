@@ -19,6 +19,23 @@
 
 > **Block Height**: #2781045 | **On-Chain Deploy Tx Hash**: `8060a14a00c59c33181905b47bf1f4240ca633bf3f364b7ab367328d6d1db8af`
 
+## Screenshots & Interface Gallery
+
+### 1. Windows Desktop UI
+The VeilLend decentralized application running on desktop with 1AM Wallet connected to Midnight Preprod, displaying active liquidity pools, APRs, and the zero-knowledge credit origination panel:
+
+![VeilLend Windows Desktop UI](docs/screenshots/windows-ui.png)
+
+### 2. Mobile Responsive UI
+VeilLend is fully responsive across mobile viewports, allowing users to originate confidential loans, inspect tier requirements, and manage collateral on handheld devices:
+
+![VeilLend Mobile UI](docs/screenshots/mobile-ui.png)
+
+### 3. Automated CI/CD Passing Checks
+All continuous integration checks passing across Node 20.x, Node 22.x, and Vercel production deployment:
+
+![Automated CI/CD Passing Checks](docs/screenshots/ci-cd-passed.png)
+
 ## What This Product Does
 DeFi lending protocols today (such as Aave or Compound) require 130%–170% overcollateralization because they cannot verify borrower creditworthiness on-chain without completely doxxing user finances. Borrowers are forced to lock up more capital than they receive, making capital access inefficient and excluding everyday users.
 
@@ -69,7 +86,7 @@ The observer **cannot see**:
 - **Proving Provider**: 1AM Extension ProofStation (Zero local proof server required)
 - **ZK Circuit Engine**: In-circuit mathematical constraints, Pedersen commitments, and Poseidon nullifiers (`src/midnight/zkProofEngine.ts`)
 - **Frontend**: React 18, Vite, TypeScript, TailwindCSS, Lucide Icons
-- **Testing**: Vitest suite with **16 passing tests across 4 test suites** (`tests/`)
+- **Testing**: Vitest suite with **21 passing tests across 5 test suites** (`tests/`)
 
 ## Prerequisites
 - **1AM Wallet Extension** installed in a Chromium-based browser (Chrome, Brave, Edge)
@@ -108,13 +125,14 @@ npm test
 ```
 Execution results:
 ```text
- ✓ tests/MidnightDAppIntegration.test.ts (4 tests)
  ✓ tests/CompactContract.test.ts (4 tests)
  ✓ tests/LendingPool.test.ts (3 tests)
  ✓ tests/ZkCreditProver.test.ts (5 tests)
+ ✓ tests/VeilLendPrivacy.test.ts (5 tests)
+ ✓ tests/MidnightDAppIntegration.test.ts (4 tests)
 
- Test Files  4 passed (4)
-      Tests  16 passed (16)
+ Test Files  5 passed (5)
+      Tests  21 passed (21)
 ```
 
 ## CI/CD
@@ -123,7 +141,7 @@ VeilLend implements an automated GitHub Actions CI/CD pipeline (`.github/workflo
 2. **Environment Setup**: Configures Node.js and installs locked dependencies.
 3. **Compact AST Verification**: Verifies Compact contract syntax, circuits, and public ledger exports against `compiler-spec.json`.
 4. **Static Typecheck**: Enforces strict TypeScript verification (`npm run lint`).
-5. **Automated Testing**: Runs all 16 Vitest tests covering circuit constraints, state transitions, double-spending prevention, and 1AM transaction balancing.
+5. **Automated Testing**: Runs all 21 Vitest tests covering circuit constraints, state transitions, privacy preservation, double-spending prevention, and 1AM transaction balancing.
 6. **Production Compilation**: Executes `npm run build` validating all WASM modules, rollup chunks, and CSS assets.
 
 ## Usage Guide
