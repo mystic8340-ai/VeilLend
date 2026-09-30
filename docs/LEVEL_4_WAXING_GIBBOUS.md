@@ -3,10 +3,19 @@
 ## 1. Mission Overview
 Level 4 delivers the complete privacy-critical core MVP of VeilLend live on the Midnight Preprod testnet, backed by technical documentation, passing CI/CD pipelines, public product profile on X, and a minimum of 15 meaningful git commits.
 
-## 2. Submission Checklist & Evidence
+## 2. 1AM Browser Extension Preprod Deployment Flow (`/deploy`)
+In strict adherence to the reference Midnight architecture (`midnight-skills-counter-dapp`):
+- **Browser Extension Deploy**: Contracts are deployed directly via the **1AM wallet extension** on **Midnight Preprod** without server-side deploy scripts.
+- **Zero Funded Server Wallets**: The 1AM wallet balances unsealed transactions and sponsors transaction fees, removing the need for server-side private keys or seed phrases.
+- **Zero Local Proof Server**: Proving is provided directly via 1AM's extension proving provider (`api.getProvingProvider`), eliminating local `localhost:6300` proof server requirements.
+- **Explicit Network ID**: Sets the Midnight Network ID (`preprod`) explicitly before any wallet or contract operations.
+- **Dedicated `/deploy` Route**: Full deployment UI with real-time status updates and prominent display of the deployed contract address upon confirmation.
+
+## 3. Submission Checklist & Evidence
 - [x] **Public GitHub Repository**: Complete source code with modular architecture, Compact smart contracts, UI, and test suites.
 - [x] **Live Preprod Demo & Contract**:
-  - Live Demo App URL: https://veillend.vercel.app (or local http://localhost:3000)
+  - Live Demo App URL: `https://veillend.vercel.app`
+  - Browser Deploy Route: `https://veillend.vercel.app/deploy`
   - Preprod Contract Address: `mn_contract_preprod1qveil9872lk90qw2k84z7m1f38y64x`
   - Preprod Transaction Hash: `0x9f8c12a77e09b114d2094c3e801ab29c54e198a2c4e3b791008d51a62ebcf490`
 - [x] **CI/CD Pipeline**: GitHub Actions workflows in `.github/workflows/ci.yml` and `.github/workflows/deploy.yml` with passing lint, tests, and build steps.
@@ -14,7 +23,7 @@ Level 4 delivers the complete privacy-critical core MVP of VeilLend live on the 
 - [x] **Demo Video Walkthrough**: Comprehensive walkthrough script documented in `docs/DEMO_WALKTHROUGH.md`.
 - [x] **Minimum 15 Meaningful Commits**: Git history contains 17+ granular, descriptive commits reflecting the true engineering lifecycle.
 
-## 3. CI/CD Architecture
+## 4. CI/CD Architecture
 The CI pipeline executes on every push and pull request across Node 20.x and 22.x:
 1. Verifies Compact contract syntax (`contracts/veillend.compact`).
 2. Typechecks entire TypeScript codebase (`npm run lint`).

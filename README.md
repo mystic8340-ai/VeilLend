@@ -2,16 +2,37 @@
 
 [![CI/CD Pipeline](https://github.com/mystic8340-ai/VeilLend/actions/workflows/ci.yml/badge.svg)](https://github.com/mystic8340-ai/VeilLend/actions)
 [![Midnight Network](https://img.shields.io/badge/Midnight-Preprod_Live-6366F1?logo=cardano)](https://midnight.network)
-[![Smart Contract](https://img.shields.io/badge/Compact-v0.23-06B6D4)](contracts/veillend.compact)
-[![License](https://img.shields.io/badge/License-Apache_2.0-10B981)](LICENSE)
+[![1AM Wallet](https://img.shields.io/badge/1AM_Wallet-Preprod_Ready-06B6D4)](https://1am.xyz)
+[![Smart Contract](https://img.shields.io/badge/Compact-v0.23-10B981)](contracts/veillend.compact)
+[![License](https://img.shields.io/badge/License-Apache_2.0-8B5CF6)](LICENSE)
 [![X Profile](https://img.shields.io/badge/X-@VeilLend-black?logo=x)](https://x.com/VeilLend)
 
 **VeilLend** is a confidential, risk-adjusted lending protocol built on the **Midnight Network** that allows borrowers to prove their creditworthiness (income thresholds, clean repayment history, credit tiers) using zero-knowledge proofs without exposing their raw financial data or wallet identity to the public ledger.
 
 - 🌐 **Live Preprod Demo**: [https://veillend.vercel.app](https://veillend.vercel.app)
+- 🚀 **Browser Contract Deploy Route**: [https://veillend.vercel.app/deploy](https://veillend.vercel.app/deploy) (or local `http://localhost:3000/deploy`)
 - 📜 **Preprod Contract Address**: `mn_contract_preprod1qveil9872lk90qw2k84z7m1f38y64x`
 - 🐦 **Product Profile on X**: [@VeilLend](https://x.com/VeilLend)
 - 📹 **Demo Walkthrough Video Script**: [docs/DEMO_WALKTHROUGH.md](docs/DEMO_WALKTHROUGH.md)
+
+---
+
+## 🚀 1AM Preprod Browser Extension Deployment Flow (`/deploy`)
+
+VeilLend strictly implements the **1AM on Midnight Preprod** browser extension deployment flow (mirrored from the reference `midnight-skills-counter-dapp` architecture):
+
+1. **Browser Extension Only**: Deployments execute entirely client-side via the [1AM browser extension](https://1am.xyz).
+2. **Zero Server Wallets**: No funded server-side deployer wallets or seed phrases are used. 1AM balances unsealed transactions and sponsors fees.
+3. **No Local Proof Server Required**: Proving is executed directly by the 1AM extension's built-in proving provider (`api.getProvingProvider`), eliminating local `localhost:6300` proof server requirements.
+4. **Explicit Network ID**: The Midnight Network ID is set explicitly (`preprod`) prior to any contract or wallet operations.
+5. **Dedicated `/deploy` Route**: Access `http://localhost:3000/deploy` to trigger the browser deployment flow, monitor indexer confirmation, and immediately view the deployed contract address.
+
+### How to Deploy via Browser:
+1. Open the DApp and navigate to the **Deploy (/deploy)** tab or URL `/deploy`.
+2. Connect your **1AM Wallet** set to **Midnight Preprod**.
+3. Click **"Deploy VeilLend Contract via 1AM Extension"**.
+4. The 1AM extension automatically proves the deploy circuit and balances the transaction.
+5. Upon confirmation by the Midnight indexer, your newly deployed contract address is displayed on screen with instant one-click integration into the Lending Market!
 
 ---
 
@@ -40,7 +61,8 @@ VeilLend uses Midnight's dual-state architecture (Public Ledger + Local Private 
 
 ## Technical Stack
 - **Smart Contract Language**: Midnight Compact (Minokawa) v0.23 (`contracts/veillend.compact`)
-- **DApp Connector**: `@midnight-ntwrk/dapp-connector-api` with Midnight Lace Wallet support
+- **DApp Connector & Deployer**: 1AM Wallet Extension & `@midnight-ntwrk/dapp-connector-api` on Midnight Preprod
+- **Proving Provider**: 1AM Extension ProofStation (Zero local proof server required)
 - **ZK Circuit Engine**: Client-side witness proving and nullifier derivation (`src/midnight/zkProofEngine.ts`)
 - **Frontend**: React 18, Vite, TypeScript, TailwindCSS, Lucide Icons
 - **Testing**: Vitest suite with 100% passing tests (`tests/`)
@@ -66,7 +88,7 @@ npm test
 ```bash
 npm run dev
 ```
-Open `http://localhost:3000` to interact with the VeilLend application.
+Open `http://localhost:3000` to interact with the VeilLend application, or `http://localhost:3000/deploy` for the browser extension contract deployment UI.
 
 ### 4. Build for Production
 ```bash
