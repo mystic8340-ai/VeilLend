@@ -19,7 +19,6 @@ In strict adherence to the reference Midnight architecture (`midnight-skills-cou
   - Deployed Preprod Contract Address: [`22f0dbac3eae847cc0fdcf59c09b40d2a09955646e3a63e424b01a6d95d94f22`](https://explorer.1am.xyz/contract/22f0dbac3eae847cc0fdcf59c09b40d2a09955646e3a63e424b01a6d95d94f22?network=preprod)
   - On-Chain Deploy Transaction Hash: [`8060a14a00c59c33181905b47bf1f4240ca633bf3f364b7ab367328d6d1db8af`](https://explorer.1am.xyz/tx/8060a14a00c59c33181905b47bf1f4240ca633bf3f364b7ab367328d6d1db8af?network=preprod) (Block #2781045)
 - [x] **CI/CD Pipeline**: GitHub Actions workflows in `.github/workflows/ci.yml` and `.github/workflows/deploy.yml` with passing lint, tests, and build steps.
-- [x] **Product Profile on X**: Public product profile created at `@VeilLend` ([https://x.com/VeilLend](https://x.com/VeilLend)) with launch announcement thread documented in `docs/X_PRODUCT_PROFILE.md`.
 - [x] **Demo Video Walkthrough**: Comprehensive walkthrough script documented in `docs/DEMO_WALKTHROUGH.md`.
 - [x] **Meaningful Commits**: Git history contains 24+ granular, descriptive commits reflecting the true engineering lifecycle.
 
